@@ -1,0 +1,541 @@
+// Organization Service - Firebase/Firestore Implementation
+import {
+  collections,
+  docs,
+  getDocument,
+  queryCollection,
+  addAuditLog,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  addDoc,
+  serverTimestamp
+} from '../firestore';
+import type {
+  Organization,
+  Location,
+  Subscription,
+  SubscriptionPlan,
+  VerificationStatus,
+  AccountStatus,
+  VerificationRequest,
+  Profile,
+  PLAN_LIMITS
+} from '../../types';
+
+// Plan limits
+const planLimits = {
+  Essential: { maxLocations: 1, maxStaff: 10, maxAdmins: 2, amountCents: 800000 },
+  Professional: { maxLocations: 2, maxStaff: 30, maxAdmins: 5, amountCents: 1500000 },
+  Enterprise: { maxLocations: 5, maxStaff: 75, maxAdmins: 10, amountCents: 2500000 },
+};
+
+// =====================================================
+// ORGANIZATION SERVICE
+// =====================================================
+
+export const organizationService = {
+  /**
+   * Get organization by ID
+   */
+  async getById(id: string): Promise<Organization | null> {
+    return getDocument<Organization>(docs.organization(id));
+  },
+
+  /**
+   * Get organization with locations
+   */
+  async getWithLocations(id: string) {
+    const org = await this.getById(id);
+    if (!org) return null;
+
+    const locations = await this.getLocations(id);
+    const subscription = await this.getSubscription(id);
+
+    return {
+      ...org,
+      locations,
+      subscription
+    };
+  },
+
+  /**
+   * Get organization stats (for dashboard)
+   */
+  async getStats(id: string) {
+    const org = await this.getById(id);
+    if (!org) return null;
+
+    // Count locations
+    const locationsSnapshot = await getDocs(collections.locations(id));
+    const locationsCount = locationsSnapshot.size;
+
+    // Count all staff
+    const usersQuery = query(
+      collections.users(),
+      where('organizationId', '==', id)
+    );
+    const usersSnapshot = await getDocs(usersQuery);
+    const staffCount = usersSnapshot.size;
+
+    // Count admins (OWNER + ADMIN roles)
+    let adminsCount = 0;
+    usersSnapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.systemRole === 'OWNER' || data.systemRole === 'ADMIN') {
+        if (data.staffStatus === 'Active') {
+          adminsCount++;
+        }
+      }
+    });
+
+    return {
+      organizationId: id,
+      name: org.name,
+      plan: org.plan,
+      maxLocations: org.maxLocations,
+      maxStaff: org.maxStaff,
+      maxAdmins: org.maxAdmins,
+      locationsCount,
+      staffCount,
+      adminsCount
+    };
+  },
+
+  /**
+   * Update organization details
+   */
+  async update(id: string, updates: Partial<Organization>) {
+    await updateDoc(docs.organization(id), {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+    return this.getById(id);
+  },
+
+  /**
+   * Get all locations for an organization
+   */
+  async getLocations(organizationId: string): Promise<Location[]> {
+    const q = query(
+      collections.locations(organizationId),
+      orderBy('isPrimary', 'desc'),
+      orderBy('name')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Location));
+  },
+
+  /**
+   * Get location by ID
+   */
+  async getLocation(organizationId: string, locationId: string): Promise<Location | null> {
+    return getDocument<Location>(docs.location(organizationId, locationId));
+  },
+
+  /**
+   * Create a new location
+   */
+  async createLocation(organizationId: string, input: {
+    name: string;
+    city?: string;
+    address?: string;
+    phone?: string;
+    isPrimary?: boolean;
+  }) {
+    const docRef = await addDoc(collections.locations(organizationId), {
+      ...input,
+      organizationId,
+      isPrimary: input.isPrimary ?? false,
+      status: 'Pending' as VerificationStatus,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    return this.getLocation(organizationId, docRef.id);
+  },
+
+  /**
+   * Update a location
+   */
+  async updateLocation(organizationId: string, locationId: string, updates: Partial<Location>) {
+    await updateDoc(docs.location(organizationId, locationId), {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+    return this.getLocation(organizationId, locationId);
+  },
+
+  /**
+   * Delete a location
+   */
+  async deleteLocation(organizationId: string, locationId: string) {
+    await deleteDoc(docs.location(organizationId, locationId));
+  },
+
+  /**
+   * Submit facility verification
+   */
+  async submitFacilityVerification(organizationId: string, locationId: string, input: {
+    licenseNumber: string;
+    licensingBody: string;
+    expiryDate: string;
+    documentUrl?: string;
+  }) {
+    // Update location with verification info
+    await updateDoc(docs.location(organizationId, locationId), {
+      licenseNumber: input.licenseNumber,
+      licensingBody: input.licensingBody,
+      licenseExpiry: input.expiryDate,
+      licenseDocumentUrl: input.documentUrl,
+      status: 'Pending' as VerificationStatus,
+      updatedAt: serverTimestamp()
+    });
+
+    // Create verification request
+    const verificationRef = await addDoc(collections.verificationRequests(), {
+      type: 'FACILITY',
+      organizationId,
+      locationId,
+      identifier: input.licenseNumber,
+      authority: input.licensingBody,
+      documentUrl: input.documentUrl,
+      status: 'Pending' as VerificationStatus,
+      submittedAt: new Date().toISOString(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    return { id: verificationRef.id };
+  },
+
+  /**
+   * Submit organization verification
+   */
+  async submitOrgVerification(organizationId: string, input: {
+    businessRegNumber: string;
+    kraPin: string;
+    documentUrl?: string;
+  }) {
+    // Update organization with verification info
+    await updateDoc(docs.organization(organizationId), {
+      businessRegistrationNumber: input.businessRegNumber,
+      kraPin: input.kraPin,
+      businessRegistrationDocUrl: input.documentUrl,
+      orgStatus: 'Pending' as VerificationStatus,
+      updatedAt: serverTimestamp()
+    });
+
+    // Create verification request
+    const verificationRef = await addDoc(collections.verificationRequests(), {
+      type: 'ORG',
+      organizationId,
+      identifier: input.kraPin,
+      authority: 'Registrar of Companies',
+      documentUrl: input.documentUrl,
+      status: 'Pending' as VerificationStatus,
+      submittedAt: new Date().toISOString(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    return { id: verificationRef.id };
+  },
+
+  /**
+   * Get subscription details
+   */
+  async getSubscription(organizationId: string): Promise<Subscription | null> {
+    const q = query(
+      collections.subscriptions(organizationId),
+      orderBy('createdAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    const doc = snapshot.docs[0];
+    return { id: doc.id, ...doc.data() } as Subscription;
+  },
+
+  /**
+   * Update subscription plan
+   */
+  async updatePlan(organizationId: string, newPlan: SubscriptionPlan) {
+    const limits = planLimits[newPlan];
+
+    // Update organization limits
+    await updateDoc(docs.organization(organizationId), {
+      plan: newPlan,
+      maxLocations: limits.maxLocations,
+      maxStaff: limits.maxStaff,
+      maxAdmins: limits.maxAdmins,
+      updatedAt: serverTimestamp()
+    });
+
+    // Get existing subscription and update
+    const subscription = await this.getSubscription(organizationId);
+    if (subscription) {
+      const subRef = docs.organization(organizationId);
+      // Update in subscriptions subcollection
+      const subQuery = query(collections.subscriptions(organizationId));
+      const subSnapshot = await getDocs(subQuery);
+      if (!subSnapshot.empty) {
+        const subDoc = subSnapshot.docs[0];
+        await updateDoc(subDoc.ref, {
+          plan: newPlan,
+          amountCents: limits.amountCents,
+          status: 'Active',
+          updatedAt: serverTimestamp()
+        });
+      }
+    }
+
+    return this.getById(organizationId);
+  }
+};
+
+// =====================================================
+// ADMIN SERVICE (SuperAdmin only)
+// =====================================================
+
+export const adminService = {
+  /**
+   * Get all organizations (SuperAdmin)
+   */
+  async getAllOrganizations(filters?: {
+    status?: AccountStatus;
+    plan?: SubscriptionPlan;
+    search?: string;
+  }) {
+    let q = query(collections.organizations(), orderBy('createdAt', 'desc'));
+
+    const snapshot = await getDocs(q);
+    let results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Organization));
+
+    // Apply filters in memory (Firestore has limitations on compound queries)
+    if (filters?.status) {
+      results = results.filter(org => org.accountStatus === filters.status);
+    }
+    if (filters?.plan) {
+      results = results.filter(org => org.plan === filters.plan);
+    }
+    if (filters?.search) {
+      const search = filters.search.toLowerCase();
+      results = results.filter(org =>
+        org.name.toLowerCase().includes(search) ||
+        org.email.toLowerCase().includes(search)
+      );
+    }
+
+    return results;
+  },
+
+  /**
+   * Get pending verification requests
+   */
+  async getPendingVerifications() {
+    const q = query(
+      collections.verificationRequests(),
+      where('status', '==', 'Pending'),
+      orderBy('submittedAt', 'asc')
+    );
+    const snapshot = await getDocs(q);
+
+    const requests = await Promise.all(
+      snapshot.docs.map(async doc => {
+        const data = doc.data() as VerificationRequest;
+        const request: VerificationRequest = { id: doc.id, ...data };
+
+        // Fetch related organization
+        if (data.organizationId) {
+          request.organization = await organizationService.getById(data.organizationId) || undefined;
+        }
+
+        // Fetch related location
+        if (data.locationId && data.organizationId) {
+          request.location = await organizationService.getLocation(data.organizationId, data.locationId) || undefined;
+        }
+
+        return request;
+      })
+    );
+
+    return requests;
+  },
+
+  /**
+   * Approve a verification
+   */
+  async approveVerification(verificationId: string, reviewerId: string) {
+    const verificationDoc = await getDoc(docs.verificationRequest(verificationId));
+    if (!verificationDoc.exists()) throw new Error('Verification request not found');
+
+    const verification = verificationDoc.data() as VerificationRequest;
+
+    // Update verification request
+    await updateDoc(docs.verificationRequest(verificationId), {
+      status: 'Verified',
+      reviewedBy: reviewerId,
+      reviewedAt: new Date().toISOString(),
+      updatedAt: serverTimestamp()
+    });
+
+    // Update the target entity
+    if (verification.type === 'ORG' && verification.organizationId) {
+      await updateDoc(docs.organization(verification.organizationId), {
+        orgStatus: 'Verified',
+        accountStatus: 'Active',
+        updatedAt: serverTimestamp()
+      });
+    } else if (verification.type === 'FACILITY' && verification.locationId && verification.organizationId) {
+      await updateDoc(docs.location(verification.organizationId, verification.locationId), {
+        status: 'Verified',
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    // Add audit log
+    await addAuditLog(
+      'Verification',
+      `Approved ${verification.type} verification`,
+      reviewerId,
+      undefined,
+      verification.organizationId,
+      { verificationId, type: verification.type }
+    );
+
+    return verification;
+  },
+
+  /**
+   * Reject a verification
+   */
+  async rejectVerification(verificationId: string, reviewerId: string, reason?: string) {
+    const verificationDoc = await getDoc(docs.verificationRequest(verificationId));
+    if (!verificationDoc.exists()) throw new Error('Verification request not found');
+
+    const verification = verificationDoc.data() as VerificationRequest;
+
+    // Update verification request
+    await updateDoc(docs.verificationRequest(verificationId), {
+      status: 'Rejected',
+      reviewedBy: reviewerId,
+      reviewedAt: new Date().toISOString(),
+      rejectionReason: reason,
+      updatedAt: serverTimestamp()
+    });
+
+    // Update the target entity
+    if (verification.type === 'ORG' && verification.organizationId) {
+      await updateDoc(docs.organization(verification.organizationId), {
+        orgStatus: 'Rejected',
+        rejectionReason: reason,
+        updatedAt: serverTimestamp()
+      });
+    } else if (verification.type === 'FACILITY' && verification.locationId && verification.organizationId) {
+      await updateDoc(docs.location(verification.organizationId, verification.locationId), {
+        status: 'Rejected',
+        rejectionReason: reason,
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    // Add audit log
+    await addAuditLog(
+      'Verification',
+      `Rejected ${verification.type} verification: ${reason}`,
+      reviewerId,
+      undefined,
+      verification.organizationId,
+      { verificationId, type: verification.type, reason }
+    );
+
+    return verification;
+  },
+
+  /**
+   * Update organization account status
+   */
+  async updateAccountStatus(organizationId: string, status: AccountStatus) {
+    await updateDoc(docs.organization(organizationId), {
+      accountStatus: status,
+      updatedAt: serverTimestamp()
+    });
+    return organizationService.getById(organizationId);
+  },
+
+  /**
+   * Get audit logs
+   */
+  async getAuditLogs(filters?: {
+    eventType?: string;
+    organizationId?: string;
+    limit?: number;
+  }) {
+    let q = query(collections.auditLogs(), orderBy('createdAt', 'desc'));
+
+    const snapshot = await getDocs(q);
+    let results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // Apply filters
+    if (filters?.eventType) {
+      results = results.filter((log: any) => log.eventType === filters.eventType);
+    }
+    if (filters?.organizationId) {
+      results = results.filter((log: any) => log.organizationId === filters.organizationId);
+    }
+    if (filters?.limit) {
+      results = results.slice(0, filters.limit);
+    }
+
+    return results;
+  },
+
+  /**
+   * Get platform statistics
+   */
+  async getPlatformStats() {
+    // Total organizations
+    const orgsSnapshot = await getDocs(collections.organizations());
+    const totalOrgs = orgsSnapshot.size;
+
+    // Count subscriptions by status
+    let activeSubscriptions = 0;
+    let mrrCents = 0;
+
+    for (const orgDoc of orgsSnapshot.docs) {
+      const subscription = await organizationService.getSubscription(orgDoc.id);
+      if (subscription?.status === 'Active') {
+        activeSubscriptions++;
+        mrrCents += subscription.amountCents || 0;
+      }
+    }
+
+    // Total staff
+    const usersQuery = query(
+      collections.users(),
+      where('organizationId', '!=', null)
+    );
+    const usersSnapshot = await getDocs(usersQuery);
+    const totalStaff = usersSnapshot.size;
+
+    // Pending verifications
+    const pendingQuery = query(
+      collections.verificationRequests(),
+      where('status', '==', 'Pending')
+    );
+    const pendingSnapshot = await getDocs(pendingQuery);
+    const pendingVerifications = pendingSnapshot.size;
+
+    return {
+      totalOrganizations: totalOrgs,
+      activeSubscriptions,
+      totalStaff,
+      pendingVerifications,
+      mrrCents
+    };
+  }
+};

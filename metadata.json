@@ -1,0 +1,9 @@
+
+{
+  "name": "HURE Core",
+  "description": "A robust multi-tenant staff management platform featuring employer, employee, and super-admin dashboards with smart scheduling, attendance tracking, and payroll exports.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
