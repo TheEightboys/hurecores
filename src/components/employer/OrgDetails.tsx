@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { organizationService, storageService } from '../../lib/services';
-import type { Organization, Location, VerificationStatus } from '../../types';
+import type { Organization, Location, VerificationStatus, SubscriptionStatus } from '../../types';
 
 const OrgDetails: React.FC = () => {
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [org, setOrg] = useState<Organization | null>(null);
     const [locations, setLocations] = useState<Location[]>([]);
+    const [subscription, setSubscription] = useState<{ status: SubscriptionStatus } | null>(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [uploading, setUploading] = useState(false);
@@ -38,12 +39,14 @@ const OrgDetails: React.FC = () => {
 
         setLoading(true);
         try {
-            const [orgData, locationsData] = await Promise.all([
+            const [orgData, locationsData, subData] = await Promise.all([
                 organizationService.getById(user.organizationId),
-                organizationService.getLocations(user.organizationId)
+                organizationService.getLocations(user.organizationId),
+                organizationService.getSubscription(user.organizationId)
             ]);
             setOrg(orgData);
             setLocations(locationsData);
+            setSubscription(subData);
 
             if (orgData) {
                 setOrgForm({
@@ -156,32 +159,48 @@ const OrgDetails: React.FC = () => {
         setShowFacilityModal(true);
     };
 
-    const getStatusBadge = (status: VerificationStatus) => {
-        const styles: Record<VerificationStatus, string> = {
-            'Verified': 'bg-emerald-100 text-emerald-700',
-            'Pending': 'bg-amber-100 text-amber-700',
-            'Unverified': 'bg-slate-100 text-slate-600',
-            'Rejected': 'bg-red-100 text-red-700'
+    // Status helpers
+    const getOrgStatusLabel = (status: VerificationStatus): { label: string; color: string } => {
+        const labels: Record<VerificationStatus, { label: string; color: string }> = {
+            'Verified': { label: 'Approved', color: 'bg-emerald-100 text-emerald-700' },
+            'Pending': { label: 'Pending Review', color: 'bg-amber-100 text-amber-700' },
+            'Unverified': { label: 'Required before billing', color: 'bg-slate-100 text-slate-600' },
+            'Rejected': { label: 'Rejected', color: 'bg-red-100 text-red-700' }
         };
-        return (
-            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${styles[status]}`}>
-                {status}
-            </span>
-        );
+        return labels[status];
     };
 
-    const isLicenseExpiringSoon = (expiryDate?: string) => {
-        if (!expiryDate) return false;
-        const expiry = new Date(expiryDate);
-        const now = new Date();
-        const daysUntilExpiry = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
+    const getFacilityStatus = (location: Location): { status: string; color: string } => {
+        const isExpired = location.licenseExpiry && new Date(location.licenseExpiry) < new Date();
+        if (isExpired) return { status: 'Expired', color: 'bg-red-100 text-red-700' };
+        if (location.status === 'Verified') return { status: 'Approved', color: 'bg-emerald-100 text-emerald-700' };
+        if (location.status === 'Pending') return { status: 'Pending', color: 'bg-amber-100 text-amber-700' };
+        return { status: 'Draft', color: 'bg-slate-100 text-slate-600' };
     };
 
-    const isLicenseExpired = (expiryDate?: string) => {
-        if (!expiryDate) return false;
-        return new Date(expiryDate) < new Date();
+    const getSubscriptionStatus = (): { label: string; color: string } => {
+        const status = subscription?.status || 'Trial';
+        const statusMap: Record<string, { label: string; color: string }> = {
+            'Trial': { label: 'Trial', color: 'bg-blue-100 text-blue-700' },
+            'Active': { label: 'Active', color: 'bg-emerald-100 text-emerald-700' },
+            'Suspended': { label: 'Suspended', color: 'bg-red-100 text-red-700' },
+            'Cancelled': { label: 'Cancelled', color: 'bg-slate-100 text-slate-600' }
+        };
+        return statusMap[status] || statusMap['Trial'];
     };
+
+    // Compliance summary
+    const complianceSummary = {
+        org: org?.orgStatus === 'Verified',
+        facilities: {
+            approved: locations.filter(l => l.status === 'Verified' && !(l.licenseExpiry && new Date(l.licenseExpiry) < new Date())).length,
+            pending: locations.filter(l => l.status === 'Pending').length,
+            expired: locations.filter(l => l.licenseExpiry && new Date(l.licenseExpiry) < new Date()).length,
+            draft: locations.filter(l => l.status === 'Unverified' && !l.licenseNumber).length
+        }
+    };
+
+    const isTrial = subscription?.status === 'Trial' || !subscription?.status;
 
     if (loading) {
         return (
@@ -191,41 +210,97 @@ const OrgDetails: React.FC = () => {
         );
     }
 
+    const subStatus = getSubscriptionStatus();
+    const orgStatus = getOrgStatusLabel(org?.orgStatus || 'Unverified');
+
     return (
-        <div className="p-8 max-w-4xl mx-auto space-y-8">
-            <h2 className="text-2xl font-bold text-slate-900">Organization Details</h2>
+        <div className="p-8 max-w-7xl mx-auto space-y-8">
+            {/* Header with Status */}
+            <div className="flex justify-between items-start">
+                <div>
+                    <h2 className="text-2xl font-bold text-slate-900">Organization Account</h2>
+                    <p className="text-slate-500 mt-1">{org?.name}</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                    <span className={`px-3 py-1.5 rounded-lg text-sm font-bold ${subStatus.color}`}>
+                        {subStatus.label}
+                    </span>
+                </div>
+            </div>
 
             {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
-                    {error}
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex justify-between items-center">
+                    <span>{error}</span>
+                    <button onClick={() => setError('')} className="text-red-500">✕</button>
                 </div>
             )}
 
             {success && (
-                <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl">
-                    {success}
+                <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl flex justify-between items-center">
+                    <span>✓ {success}</span>
+                    <button onClick={() => setSuccess('')} className="text-emerald-500">✕</button>
                 </div>
             )}
 
-            {/* Organization Info */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-8">
-                <div className="flex justify-between items-start mb-6">
-                    <div>
-                        <h3 className="text-lg font-bold text-slate-900">{org?.name}</h3>
-                        <p className="text-slate-500">{org?.email}</p>
+            {/* Compliance Summary Banner */}
+            <div className="bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200 rounded-xl p-6">
+                <h3 className="font-bold text-slate-800 mb-4">📋 Compliance Summary</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white rounded-lg p-4 border border-slate-200">
+                        <p className="text-sm text-slate-500 mb-1">Organization</p>
+                        <div className="flex items-center space-x-2">
+                            {complianceSummary.org ? (
+                                <span className="text-emerald-600 font-bold">✅ Approved</span>
+                            ) : (
+                                <span className="text-amber-600 font-bold">⏳ Pending</span>
+                            )}
+                        </div>
                     </div>
-                    {getStatusBadge(org?.orgStatus || 'Unverified')}
+                    <div className="bg-white rounded-lg p-4 border border-slate-200">
+                        <p className="text-sm text-slate-500 mb-1">Facilities Approved</p>
+                        <span className="text-xl font-bold text-emerald-600">{complianceSummary.facilities.approved}</span>
+                    </div>
+                    <div className="bg-white rounded-lg p-4 border border-slate-200">
+                        <p className="text-sm text-slate-500 mb-1">Pending Review</p>
+                        <span className="text-xl font-bold text-amber-600">{complianceSummary.facilities.pending}</span>
+                    </div>
+                    <div className="bg-white rounded-lg p-4 border border-slate-200">
+                        <p className="text-sm text-slate-500 mb-1">Expired</p>
+                        <span className={`text-xl font-bold ${complianceSummary.facilities.expired > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                            {complianceSummary.facilities.expired}
+                        </span>
+                    </div>
                 </div>
+            </div>
 
-                {org?.orgStatus === 'Rejected' && org?.rejectionReason && (
-                    <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-                        <div className="font-semibold text-red-800 mb-1">Rejection Reason:</div>
-                        <p className="text-red-700">{org.rejectionReason}</p>
+            {/* Two Column Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Section 1: Organization Verification */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-6 h-fit">
+                    <div className="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 className="text-lg font-bold text-slate-900">Organization Verification</h3>
+                            <p className="text-sm text-slate-500 mt-1">Global business credentials</p>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${orgStatus.color}`}>
+                            {orgStatus.label}
+                        </span>
                     </div>
-                )}
 
-                <form onSubmit={handleOrgSubmit} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                        <p className="text-sm text-blue-700">
+                            <strong>ℹ️ Important:</strong> Verification is required to enable billing, invoicing, and payouts.
+                        </p>
+                    </div>
+
+                    {org?.orgStatus === 'Rejected' && org?.rejectionReason && (
+                        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                            <div className="font-semibold text-red-800 mb-1">Rejection Reason:</div>
+                            <p className="text-red-700">{org.rejectionReason}</p>
+                        </div>
+                    )}
+
+                    <form onSubmit={handleOrgSubmit} className="space-y-4">
                         <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-2">
                                 Business Registration Number
@@ -234,128 +309,188 @@ const OrgDetails: React.FC = () => {
                                 type="text"
                                 value={orgForm.businessRegNumber}
                                 onChange={(e) => setOrgForm(prev => ({ ...prev, businessRegNumber: e.target.value }))}
-                                className="w-full px-4 py-3 border border-slate-300 rounded-xl"
+                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#4fd1c5] outline-none"
                                 placeholder="e.g., PVT-ABCD1234"
                             />
                         </div>
+
                         <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                KRA PIN
+                                KRA PIN <span className="font-normal text-slate-400">(Required for invoicing & tax)</span>
                             </label>
                             <input
                                 type="text"
                                 value={orgForm.kraPin}
-                                onChange={(e) => setOrgForm(prev => ({ ...prev, kraPin: e.target.value }))}
-                                className="w-full px-4 py-3 border border-slate-300 rounded-xl"
+                                onChange={(e) => setOrgForm(prev => ({ ...prev, kraPin: e.target.value.toUpperCase() }))}
+                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#4fd1c5] outline-none"
                                 placeholder="e.g., P001234567X"
+                                pattern="[A-Z][0-9]{9}[A-Z]"
+                                title="KRA PIN format: 1 letter, 9 digits, 1 letter"
                             />
                         </div>
-                    </div>
 
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">
-                            Business Registration Document
-                        </label>
-                        <div className="flex items-center space-x-4">
-                            <input
-                                type="file"
-                                accept=".pdf,.jpg,.jpeg,.png"
-                                onChange={handleOrgDocUpload}
-                                className="hidden"
-                                id="org-doc-upload"
-                            />
-                            <label
-                                htmlFor="org-doc-upload"
-                                className={`px-4 py-2 border border-slate-300 rounded-xl cursor-pointer hover:bg-slate-50 ${uploading ? 'opacity-50' : ''}`}
-                            >
-                                {uploading ? 'Uploading...' : 'Choose File'}
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                Upload Registration Document
                             </label>
-                            {orgForm.documentUrl && (
-                                <a
-                                    href={orgForm.documentUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 hover:text-blue-700 font-medium"
+                            <div className="flex items-center space-x-4">
+                                <input
+                                    type="file"
+                                    accept=".pdf,.jpg,.jpeg,.png"
+                                    onChange={handleOrgDocUpload}
+                                    className="hidden"
+                                    id="org-doc-upload"
+                                />
+                                <label
+                                    htmlFor="org-doc-upload"
+                                    className={`px-4 py-2 border border-slate-300 rounded-xl cursor-pointer hover:bg-slate-50 ${uploading ? 'opacity-50' : ''}`}
                                 >
-                                    View Document ↗
-                                </a>
-                            )}
-                        </div>
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={org?.orgStatus === 'Verified'}
-                        className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50"
-                    >
-                        {org?.orgStatus === 'Pending' ? 'Update Verification' : 'Submit for Verification'}
-                    </button>
-                </form>
-            </div>
-
-            {/* Facilities / Locations */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-8">
-                <h3 className="text-lg font-bold text-slate-900 mb-6">Facility Licenses</h3>
-
-                <div className="space-y-4">
-                    {locations.map(location => (
-                        <div key={location.id} className="border border-slate-200 rounded-xl p-4">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <div className="flex items-center space-x-3">
-                                        <h4 className="font-bold text-slate-900">{location.name}</h4>
-                                        {location.isPrimary && (
-                                            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold">PRIMARY</span>
-                                        )}
-                                    </div>
-                                    <p className="text-sm text-slate-500 mt-1">
-                                        {location.address}{location.city ? `, ${location.city}` : ''}
-                                    </p>
-
-                                    {location.licenseNumber && (
-                                        <div className="mt-3 text-sm">
-                                            <span className="text-slate-600">License: </span>
-                                            <span className="font-medium">{location.licenseNumber}</span>
-                                            {location.licenseExpiry && (
-                                                <span className={`ml-2 ${isLicenseExpired(location.licenseExpiry)
-                                                    ? 'text-red-600'
-                                                    : isLicenseExpiringSoon(location.licenseExpiry)
-                                                        ? 'text-amber-600'
-                                                        : 'text-slate-500'
-                                                    }`}>
-                                                    (Expires: {location.licenseExpiry}
-                                                    {isLicenseExpired(location.licenseExpiry) && ' - EXPIRED'}
-                                                    {isLicenseExpiringSoon(location.licenseExpiry) && ' - EXPIRING SOON'})
-                                                </span>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {location.status === 'Rejected' && location.rejectionReason && (
-                                        <div className="mt-2 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
-                                            <strong>Rejected:</strong> {location.rejectionReason}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="flex items-center space-x-3">
-                                    {getStatusBadge(location.status)}
-                                    <button
-                                        onClick={() => openFacilityModal(location)}
-                                        className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                                    {uploading ? 'Uploading...' : '📎 Choose File'}
+                                </label>
+                                {orgForm.documentUrl && (
+                                    <a
+                                        href={orgForm.documentUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[#0f766e] hover:text-[#0d9488] font-medium"
                                     >
-                                        {location.licenseNumber ? 'Update' : 'Add License'}
-                                    </button>
-                                </div>
+                                        View Document ↗
+                                    </a>
+                                )}
                             </div>
                         </div>
-                    ))}
 
-                    {locations.length === 0 && (
-                        <p className="text-center text-slate-500 py-8">No locations added yet</p>
-                    )}
+                        <button
+                            type="submit"
+                            disabled={org?.orgStatus === 'Verified'}
+                            className="w-full px-6 py-3 bg-[#1a2e35] text-[#4fd1c5] rounded-xl font-bold hover:bg-[#152428] disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-colors"
+                        >
+                            {org?.orgStatus === 'Verified' ? '✓ Verified' :
+                                org?.orgStatus === 'Pending' ? 'Update Verification' : 'Submit for Verification'}
+                        </button>
+                    </form>
+
+                    {/* Status Meanings */}
+                    <div className="mt-6 pt-6 border-t border-slate-100">
+                        <p className="text-xs text-slate-400 mb-2 font-semibold uppercase">Status Guide</p>
+                        <div className="space-y-1 text-xs text-slate-500">
+                            <p>• <strong>Draft</strong> – Nothing submitted yet</p>
+                            <p>• <strong>Pending</strong> – Submitted, awaiting HURE review</p>
+                            <p>• <strong>Approved</strong> – Verified by HURE admin</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Section 2: Facility Licenses */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-6 h-fit">
+                    <div className="mb-4">
+                        <h3 className="text-lg font-bold text-[#1a2e35]">Facility Licenses</h3>
+                        <p className="text-sm text-slate-500 mt-1">Per location verification</p>
+                    </div>
+
+                    <div className="space-y-4">
+                        {locations.map(location => {
+                            const facilityStatus = getFacilityStatus(location);
+                            const isExpired = location.licenseExpiry && new Date(location.licenseExpiry) < new Date();
+
+                            return (
+                                <div key={location.id} className={`border rounded-xl p-4 ${isExpired ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}>
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <div className="flex items-center space-x-2">
+                                                <h4 className="font-bold text-slate-900">{location.name}</h4>
+                                                {location.isPrimary && (
+                                                    <span className="bg-[#e0f2f1] text-[#0f766e] px-2 py-0.5 rounded text-xs font-bold border border-[#4fd1c5]/30">PRIMARY</span>
+                                                )}
+                                            </div>
+                                            <p className="text-sm text-slate-500 mt-1">
+                                                {location.address}{location.city ? `, ${location.city}` : ''}
+                                            </p>
+
+                                            {location.licenseNumber && (
+                                                <div className="mt-2 text-sm">
+                                                    <span className="text-slate-600">License: </span>
+                                                    <span className="font-medium">{location.licenseNumber}</span>
+                                                    {location.licensingBody && (
+                                                        <span className="text-slate-400 ml-2">({location.licensingBody})</span>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {location.licenseExpiry && (
+                                                <p className={`text-xs mt-1 ${isExpired ? 'text-red-600 font-bold' : 'text-slate-400'}`}>
+                                                    {isExpired ? '⚠️ EXPIRED: ' : 'Expires: '}
+                                                    {new Date(location.licenseExpiry).toLocaleDateString()}
+                                                </p>
+                                            )}
+
+                                            {location.status === 'Rejected' && location.rejectionReason && (
+                                                <div className="mt-2 text-sm text-red-600 bg-red-100 rounded-lg px-3 py-2">
+                                                    <strong>Rejected:</strong> {location.rejectionReason}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex flex-col items-end space-y-2">
+                                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${facilityStatus.color}`}>
+                                                {facilityStatus.status}
+                                            </span>
+                                            <button
+                                                onClick={() => openFacilityModal(location)}
+                                                className="text-[#0f766e] hover:text-[#0d9488] font-bold text-sm transition-colors"
+                                            >
+                                                {location.licenseNumber ? 'Update' : 'Add License'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Pending location notice */}
+                                    {location.status === 'Pending' && (
+                                        <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                            <p className="text-xs font-semibold text-amber-800 mb-2">⚠️ Limited actions until verified</p>
+                                            <div className="grid grid-cols-2 gap-1 text-xs text-amber-700">
+                                                <p>• Scheduling: ✅ Allowed</p>
+                                                <p>• Attendance: ✅ Allowed</p>
+                                                <p>• Payroll preview: ✅ Allowed</p>
+                                                <p>• Payroll payout: ❌ Blocked</p>
+                                                <p>• Invoicing: ❌ Blocked</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+
+                        {locations.length === 0 && (
+                            <div className="text-center py-8 text-slate-500">
+                                <p className="text-4xl mb-2">📍</p>
+                                <p>No locations added yet</p>
+                                <a href="/employer/locations" className="text-blue-600 font-medium text-sm">Add Location →</a>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
+
+            {/* Trial-specific behavior notice */}
+            {isTrial && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+                    <h4 className="font-bold text-blue-800 mb-3 flex items-center">
+                        <span className="mr-2">ℹ️</span> Trial Account Notice
+                    </h4>
+                    <p className="text-sm text-blue-700 mb-3">
+                        During your trial period, you can complete all verification steps. However, the following actions require
+                        <strong> Approved</strong> verification status:
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                        <p className="text-blue-700">❌ Billing & Payments</p>
+                        <p className="text-blue-700">❌ Generate Invoices</p>
+                        <p className="text-blue-700">❌ Payroll Payouts</p>
+                        <p className="text-blue-700">❌ Export Statutory Reports</p>
+                        <p className="text-blue-700">❌ External Payments</p>
+                    </div>
+                </div>
+            )}
 
             {/* Facility License Modal */}
             {showFacilityModal && selectedLocation && (
@@ -426,15 +561,10 @@ const OrgDetails: React.FC = () => {
                                         htmlFor="facility-doc-upload"
                                         className={`px-4 py-2 border border-slate-300 rounded-xl cursor-pointer hover:bg-slate-50 ${uploading ? 'opacity-50' : ''}`}
                                     >
-                                        {uploading ? 'Uploading...' : 'Choose File'}
+                                        {uploading ? 'Uploading...' : '📎 Choose File'}
                                     </label>
                                     {facilityForm.documentUrl && (
-                                        <a
-                                            href={facilityForm.documentUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-blue-600 hover:text-blue-700"
-                                        >
+                                        <a href={facilityForm.documentUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700">
                                             View ↗
                                         </a>
                                     )}

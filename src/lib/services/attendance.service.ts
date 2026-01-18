@@ -212,6 +212,7 @@ export const attendanceService = {
     isExternal?: boolean;
     externalLocumName?: string;
     externalLocumRole?: string;
+    shiftId?: string;
   }): Promise<AttendanceRecord> {
     // Calculate hours if clock times provided
     let totalHours = input.totalHours || 0;
@@ -234,6 +235,7 @@ export const attendanceService = {
       isExternal: input.isExternal || false,
       externalLocumName: input.externalLocumName || null,
       externalLocumRole: input.externalLocumRole || null,
+      shiftId: input.shiftId || null,
       editedBy: auth.currentUser?.uid,
       editReason: 'Manual entry',
       createdAt: serverTimestamp(),

@@ -43,11 +43,19 @@ const MySchedule: React.FC = () => {
 
         setAccepting(shiftId);
         try {
-            await scheduleService.assignStaff(user.organizationId, shiftId, {
+            const result = await scheduleService.assignStaff(user.organizationId, shiftId, {
                 staffId: user.id,
                 isLocum: false
             });
-            loadData();
+
+            if (result.success) {
+                // Success! Reload data to show updated shifts
+                await loadData();
+                alert('✅ Shift accepted successfully!');
+            } else {
+                // Assignment failed, show error to user
+                alert(result.error || 'Failed to accept shift');
+            }
         } catch (error: any) {
             console.error('Error accepting shift:', error);
             alert(error.message || 'Failed to accept shift');
@@ -178,7 +186,11 @@ const MySchedule: React.FC = () => {
                                         </div>
                                     </div>
                                     <button
-                                        onClick={() => handleAcceptShift(shift.id)}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleAcceptShift(shift.id);
+                                        }}
                                         disabled={accepting === shift.id}
                                         className="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold hover:bg-blue-50 transition-colors shadow-lg disabled:opacity-50 whitespace-nowrap"
                                     >

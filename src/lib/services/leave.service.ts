@@ -55,16 +55,19 @@ export const leaveService = {
   },
 
   /**
-   * Create default leave types for new organization
+   * Create default leave types for new organization (Kenya Standards)
    */
   async createDefaultLeaveTypes(organizationId: string): Promise<void> {
     const defaults = [
-      { name: 'Annual Leave', daysAllowed: 21, isPaid: true, requiresApproval: true },
-      { name: 'Sick Leave', daysAllowed: 10, isPaid: true, requiresApproval: true },
-      { name: 'Maternity Leave', daysAllowed: 90, isPaid: true, requiresApproval: true },
-      { name: 'Paternity Leave', daysAllowed: 14, isPaid: true, requiresApproval: true },
-      { name: 'Unpaid Leave', daysAllowed: 30, isPaid: false, requiresApproval: true },
-      { name: 'Compassionate Leave', daysAllowed: 5, isPaid: true, requiresApproval: true }
+      { name: 'Annual Leave', daysAllowed: 21, isPaid: true, requiresApproval: true, requiresDocument: false, carryForwardAllowed: true, maxCarryForwardDays: 10, appliesToAll: true, appliesToRoles: [], canBeOverridden: true, isDefault: true, notes: 'Kenya Employment Act' },
+      { name: 'Sick Leave - Paid', daysAllowed: 14, isPaid: true, requiresApproval: true, requiresDocument: true, carryForwardAllowed: false, appliesToAll: true, appliesToRoles: [], canBeOverridden: false, isDefault: true, notes: '7 full + 7 half (policy configurable)' },
+      { name: 'Sick Leave - Unpaid', daysAllowed: 999, isPaid: false, requiresApproval: true, requiresDocument: true, carryForwardAllowed: false, appliesToAll: true, appliesToRoles: [], canBeOverridden: false, isDefault: true, notes: 'After paid sick leave exhausted' },
+      { name: 'Maternity Leave', daysAllowed: 90, isPaid: true, requiresApproval: true, requiresDocument: true, carryForwardAllowed: false, appliesToAll: false, appliesToRoles: ['Doctor', 'Nurse', 'Midwife', 'Receptionist / Front Desk', 'HR', 'Administrator', 'Accounts / Finance'], canBeOverridden: false, isDefault: true, notes: 'Female employees' },
+      { name: 'Paternity Leave', daysAllowed: 14, isPaid: true, requiresApproval: true, requiresDocument: true, carryForwardAllowed: false, appliesToAll: false, appliesToRoles: ['Doctor', 'Clinical Officer', 'Nurse', 'Lab Technician', 'Pharmacist', 'HR', 'Administrator'], canBeOverridden: false, isDefault: true, notes: 'Male employees' },
+      { name: 'Compassionate Leave', daysAllowed: 5, isPaid: true, requiresApproval: true, requiresDocument: false, carryForwardAllowed: false, appliesToAll: true, appliesToRoles: [], canBeOverridden: true, isDefault: true, notes: 'Bereavement / family emergency' },
+      { name: 'Study Leave', daysAllowed: 10, isPaid: true, requiresApproval: true, requiresDocument: true, carryForwardAllowed: false, appliesToAll: true, appliesToRoles: [], canBeOverridden: true, isDefault: true, notes: 'Employer-defined, configurable paid/unpaid' },
+      { name: 'Unpaid Leave', daysAllowed: 999, isPaid: false, requiresApproval: true, requiresDocument: false, carryForwardAllowed: false, appliesToAll: true, appliesToRoles: [], canBeOverridden: false, isDefault: true, notes: 'Unlimited (no balance limit)' },
+      { name: 'Comp Off', daysAllowed: 10, isPaid: true, requiresApproval: true, requiresDocument: false, carryForwardAllowed: true, maxCarryForwardDays: 5, appliesToAll: true, appliesToRoles: [], canBeOverridden: true, isDefault: true, notes: 'Compensatory time off' }
     ];
 
     for (const type of defaults) {
@@ -148,7 +151,7 @@ export const leaveService = {
   },
 
   /**
-   * Create leave request
+   * Create leave request with balance enforcement
    */
   async createRequest(organizationId: string, input: {
     staffId: string;
@@ -156,7 +159,8 @@ export const leaveService = {
     startDate: string;
     endDate: string;
     reason?: string;
-  }): Promise<{ success: boolean; error?: string; request?: LeaveRequest }> {
+    allowOverBalance?: boolean; // Admin can override balance check
+  }): Promise<{ success: boolean; error?: string; request?: LeaveRequest; balanceInfo?: { available: number; requested: number; isOverBalance: boolean } }> {
     // Validate dates
     if (new Date(input.endDate) < new Date(input.startDate)) {
       return { success: false, error: 'End date must be on or after start date' };
@@ -168,6 +172,38 @@ export const leaveService = {
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const daysRequested = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
+    // Get leave type to check if it's unlimited (999 days means unlimited)
+    const leaveTypes = await this.getLeaveTypes(organizationId);
+    const leaveType = leaveTypes.find(lt => lt.id === input.leaveTypeId);
+    const isPaid = leaveType?.isPaid ?? true;
+    const isUnlimited = leaveType?.daysAllowed === 999;
+
+    // Balance enforcement (skip for unlimited leave types)
+    let balanceInfo = { available: 0, requested: daysRequested, isOverBalance: false };
+
+    if (!isUnlimited) {
+      try {
+        const balances = await this.getStaffBalances(organizationId, input.staffId);
+        const typeBalance = balances.find(b => b.leaveTypeId === input.leaveTypeId);
+
+        if (typeBalance) {
+          const available = typeBalance.remaining;
+          balanceInfo = { available, requested: daysRequested, isOverBalance: daysRequested > available };
+
+          // Block if over balance and admin hasn't confirmed
+          if (balanceInfo.isOverBalance && !input.allowOverBalance) {
+            return {
+              success: false,
+              error: `Insufficient leave balance. Available: ${available} days, Requested: ${daysRequested} days. Admin confirmation required to proceed.`,
+              balanceInfo
+            };
+          }
+        }
+      } catch (err) {
+        console.error('Error checking balance:', err);
+      }
+    }
+
     const docRef = await addDoc(collections.leaveRequests(organizationId), {
       organizationId,
       staffId: input.staffId,
@@ -175,8 +211,13 @@ export const leaveService = {
       startDate: input.startDate,
       endDate: input.endDate,
       daysRequested,
+      isHalfDay: false,
+      isPaid,
       reason: input.reason || null,
       status: 'Pending' as LeaveStatus,
+      requestedBy: auth.currentUser?.uid || null,
+      requestedByEmail: auth.currentUser?.email || null,
+      balanceBeforeRequest: balanceInfo.available,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
@@ -203,7 +244,7 @@ export const leaveService = {
     }
 
     const request = await this.getRequestById(organizationId, docRef.id);
-    return { success: true, request: request! };
+    return { success: true, request: request!, balanceInfo };
   },
 
   /**

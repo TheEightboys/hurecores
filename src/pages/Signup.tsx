@@ -4,6 +4,7 @@ import { PLANS } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { docs, setDoc, serverTimestamp, collections, addDoc } from '../lib/firestore';
 import { emailService } from '../lib/services/email.service';
+import { normalizeKenyanPhone, isValidKenyanPhone } from '../lib/utils/phoneValidation';
 import { SystemRole, SubscriptionPlan, PLAN_LIMITS } from '../types';
 
 interface SignupFormData {
@@ -62,6 +63,10 @@ const Signup: React.FC = () => {
     locationPhone: ''
   });
 
+  // Phone validation state
+  const [orgPhoneValid, setOrgPhoneValid] = useState(true);
+  const [locPhoneValid, setLocPhoneValid] = useState(true);
+
   const updateFormData = (field: keyof SignupFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -76,6 +81,11 @@ const Signup: React.FC = () => {
       }
       if (!formData.orgEmail.trim() || !/\S+@\S+\.\S+/.test(formData.orgEmail)) {
         setError('Valid organization email is required');
+        return false;
+      }
+      // Validate org phone if provided
+      if (formData.orgPhone && !orgPhoneValid) {
+        setError('Please enter a valid Kenyan phone number for the organization');
         return false;
       }
     }
@@ -102,6 +112,11 @@ const Signup: React.FC = () => {
     if (step === 4) {
       if (!formData.locationName.trim()) {
         setError('Location name is required');
+        return false;
+      }
+      // Validate location phone if provided
+      if (formData.locationPhone && !locPhoneValid) {
+        setError('Please enter a valid Kenyan phone number for the location');
         return false;
       }
     }
@@ -299,9 +314,9 @@ const Signup: React.FC = () => {
         <React.Fragment key={s}>
           <div
             className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${s < step
-              ? 'bg-green-500 text-white'
+              ? 'bg-emerald-500 text-white'
               : s === step
-                ? 'bg-blue-600 text-white'
+                ? 'bg-teal-600 text-white'
                 : 'bg-slate-200 text-slate-500'
               }`}
           >
@@ -309,7 +324,7 @@ const Signup: React.FC = () => {
           </div>
           {s < 4 && (
             <div
-              className={`w-12 h-1 mx-1 rounded ${s < step ? 'bg-green-500' : 'bg-slate-200'
+              className={`w-12 h-1 mx-1 rounded ${s < step ? 'bg-emerald-500' : 'bg-slate-200'
                 }`}
             />
           )}
@@ -334,7 +349,7 @@ const Signup: React.FC = () => {
           maxLength={6}
           value={otp}
           onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-2xl tracking-widest"
+          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-center text-2xl tracking-widest"
           placeholder="000000"
         />
       </div>
@@ -343,7 +358,7 @@ const Signup: React.FC = () => {
         <button
           onClick={handleSendOTP}
           disabled={loading}
-          className="text-blue-600 text-sm hover:text-blue-800 font-semibold"
+          className="text-teal-600 text-sm hover:text-teal-800 font-semibold"
         >
           Resend Code
         </button>
@@ -366,7 +381,7 @@ const Signup: React.FC = () => {
           type="text"
           value={formData.orgName}
           onChange={(e) => updateFormData('orgName', e.target.value)}
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
           placeholder="e.g., Nairobi Medical Centre"
         />
       </div>
@@ -379,7 +394,7 @@ const Signup: React.FC = () => {
           type="email"
           value={formData.orgEmail}
           onChange={(e) => updateFormData('orgEmail', e.target.value)}
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
           placeholder="info@yourorganization.com"
         />
       </div>
@@ -387,13 +402,28 @@ const Signup: React.FC = () => {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-2">Phone</label>
-          <input
-            type="tel"
-            value={formData.orgPhone}
-            onChange={(e) => updateFormData('orgPhone', e.target.value)}
-            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="+254..."
-          />
+          <div className="flex items-center border border-slate-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-teal-500">
+            <div className="flex items-center px-3 py-3 bg-slate-50 border-r border-slate-200 text-slate-600 font-medium">
+              <span className="mr-1.5">🇰🇪</span>
+              <span>+254</span>
+            </div>
+            <input
+              type="tel"
+              value={formData.orgPhone.replace('+254', '')}
+              onChange={(e) => {
+                const input = e.target.value.replace(/[^\d]/g, '').substring(0, 9);
+                const normalized = input ? `+254${input}` : '';
+                updateFormData('orgPhone', normalized);
+                setOrgPhoneValid(input.length === 0 || input.length === 9);
+              }}
+              className="flex-1 px-3 py-3 outline-none"
+              placeholder="712 345 678"
+              maxLength={11}
+            />
+          </div>
+          {formData.orgPhone && !orgPhoneValid && (
+            <p className="text-xs text-red-500 mt-1">Enter 9 digits after +254</p>
+          )}
         </div>
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-2">City</label>
@@ -401,7 +431,7 @@ const Signup: React.FC = () => {
             type="text"
             value={formData.orgCity}
             onChange={(e) => updateFormData('orgCity', e.target.value)}
-            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
             placeholder="Nairobi"
           />
         </div>
@@ -413,7 +443,7 @@ const Signup: React.FC = () => {
           type="text"
           value={formData.orgAddress}
           onChange={(e) => updateFormData('orgAddress', e.target.value)}
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
           placeholder="Street address"
         />
       </div>
@@ -436,7 +466,7 @@ const Signup: React.FC = () => {
             type="text"
             value={formData.firstName}
             onChange={(e) => updateFormData('firstName', e.target.value)}
-            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
           />
         </div>
         <div>
@@ -447,7 +477,7 @@ const Signup: React.FC = () => {
             type="text"
             value={formData.lastName}
             onChange={(e) => updateFormData('lastName', e.target.value)}
-            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
           />
         </div>
       </div>
@@ -460,7 +490,7 @@ const Signup: React.FC = () => {
           type="email"
           value={formData.email}
           onChange={(e) => updateFormData('email', e.target.value)}
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
           placeholder="you@example.com"
         />
       </div>
@@ -473,7 +503,7 @@ const Signup: React.FC = () => {
           type="password"
           value={formData.password}
           onChange={(e) => updateFormData('password', e.target.value)}
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
           placeholder="Minimum 6 characters"
         />
       </div>
@@ -486,7 +516,7 @@ const Signup: React.FC = () => {
           type="password"
           value={formData.confirmPassword}
           onChange={(e) => updateFormData('confirmPassword', e.target.value)}
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
           placeholder="Confirm your password"
         />
       </div>
@@ -506,12 +536,12 @@ const Signup: React.FC = () => {
             key={plan.id}
             onClick={() => updateFormData('plan', plan.id as SubscriptionPlan)}
             className={`relative p-6 rounded-2xl border-2 cursor-pointer transition-all ${formData.plan === plan.id
-              ? 'border-blue-600 bg-blue-50'
+              ? 'border-teal-600 bg-teal-50'
               : 'border-slate-200 hover:border-slate-300'
               }`}
           >
             {plan.id === 'Professional' && (
-              <span className="absolute -top-3 left-4 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+              <span className="absolute -top-3 left-4 bg-teal-600 text-white text-xs font-bold px-3 py-1 rounded-full">
                 RECOMMENDED
               </span>
             )}
@@ -541,7 +571,7 @@ const Signup: React.FC = () => {
             </ul>
 
             {formData.plan === plan.id && (
-              <div className="absolute top-4 right-4 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+              <div className="absolute top-4 right-4 w-6 h-6 bg-teal-600 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm">✓</span>
               </div>
             )}
@@ -566,7 +596,7 @@ const Signup: React.FC = () => {
           type="text"
           value={formData.locationName}
           onChange={(e) => updateFormData('locationName', e.target.value)}
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
           placeholder="e.g., Main Branch, Westlands Clinic"
         />
       </div>
@@ -578,19 +608,34 @@ const Signup: React.FC = () => {
             type="text"
             value={formData.locationCity}
             onChange={(e) => updateFormData('locationCity', e.target.value)}
-            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
             placeholder="Nairobi"
           />
         </div>
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-2">Phone</label>
-          <input
-            type="tel"
-            value={formData.locationPhone}
-            onChange={(e) => updateFormData('locationPhone', e.target.value)}
-            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="+254..."
-          />
+          <div className="flex items-center border border-slate-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-teal-500">
+            <div className="flex items-center px-3 py-3 bg-slate-50 border-r border-slate-200 text-slate-600 font-medium">
+              <span className="mr-1.5">🇰🇪</span>
+              <span>+254</span>
+            </div>
+            <input
+              type="tel"
+              value={formData.locationPhone.replace('+254', '')}
+              onChange={(e) => {
+                const input = e.target.value.replace(/[^\d]/g, '').substring(0, 9);
+                const normalized = input ? `+254${input}` : '';
+                updateFormData('locationPhone', normalized);
+                setLocPhoneValid(input.length === 0 || input.length === 9);
+              }}
+              className="flex-1 px-3 py-3 outline-none"
+              placeholder="712 345 678"
+              maxLength={11}
+            />
+          </div>
+          {formData.locationPhone && !locPhoneValid && (
+            <p className="text-xs text-red-500 mt-1">Enter 9 digits after +254</p>
+          )}
         </div>
       </div>
 
@@ -600,13 +645,13 @@ const Signup: React.FC = () => {
           type="text"
           value={formData.locationAddress}
           onChange={(e) => updateFormData('locationAddress', e.target.value)}
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
           placeholder="Street address"
         />
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-        <p className="text-sm text-blue-800">
+      <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
+        <p className="text-sm text-teal-800">
           <strong>💡 Tip:</strong> You can add more locations from your dashboard after completing signup.
           Facility licenses will need to be verified by our team.
         </p>
@@ -619,7 +664,7 @@ const Signup: React.FC = () => {
       <div className="w-full max-w-xl">
         <div className="bg-white rounded-3xl shadow-2xl p-8">
           <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-teal-600 to-teal-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <span className="text-white text-2xl font-bold">H</span>
             </div>
             <h1 className="text-2xl font-bold text-slate-900">Create Your Account</h1>
@@ -662,14 +707,14 @@ const Signup: React.FC = () => {
               <button
                 onClick={handleVerifyOTP}
                 disabled={loading}
-                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all font-mono"
+                className="px-8 py-3 bg-gradient-to-r from-teal-600 to-teal-800 text-white font-bold rounded-xl hover:from-teal-700 hover:to-teal-900 transition-all font-mono"
               >
                 {loading ? 'Verifying...' : 'Verify Code →'}
               </button>
             ) : step < 4 ? (
               <button
                 onClick={handleNext}
-                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all"
+                className="px-8 py-3 bg-gradient-to-r from-teal-600 to-teal-800 text-white font-bold rounded-xl hover:from-teal-700 hover:to-teal-900 transition-all"
               >
                 {step === 2 ? 'Verify Email →' : 'Continue →'}
               </button>
@@ -677,7 +722,7 @@ const Signup: React.FC = () => {
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50"
+                className="px-8 py-3 bg-gradient-to-r from-teal-600 to-teal-800 text-white font-bold rounded-xl hover:from-teal-700 hover:to-teal-900 transition-all disabled:opacity-50"
               >
                 {loading ? 'Creating Account...' : 'Complete Signup ✓'}
               </button>

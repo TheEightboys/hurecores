@@ -16,7 +16,7 @@ export type VerificationStatus = 'Verified' | 'Pending' | 'Unverified' | 'Reject
 
 export type AccountStatus = 'Active' | 'Under Review' | 'Suspended';
 
-export type EmploymentType = 'Full-Time' | 'Part-Time' | 'Contract' | 'Casual' | 'Locum' | 'Salary' | 'Daily' | 'Shift';
+export type EmploymentType = 'Full-Time' | 'Part-Time' | 'Contract' | 'Locum' | 'External';
 
 export type StaffStatus = 'Invited' | 'Active' | 'Inactive' | 'Archived' | 'On Leave' | 'Terminated';
 
@@ -29,6 +29,29 @@ export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
 export type VerificationType = 'ORG' | 'FACILITY';
 
 export type AuditEventType = 'Security' | 'System' | 'Payment' | 'Verification' | 'Staff' | 'Schedule';
+
+// Healthcare-specific job titles for classification and reporting
+// NOTE: Job titles do NOT affect system access or consume admin seats
+export const JOB_TITLES = [
+  'Doctor',
+  'Clinical Officer',
+  'Nurse',
+  'Midwife',
+  'Dentist',
+  'Lab Technician',
+  'Radiographer',
+  'Pharmacist',
+  'Receptionist / Front Desk',
+  'HR',
+  'Administrator',
+  'Accounts / Finance',
+  'Operations Manager',
+  'IT / Systems',
+  'Support Staff',
+  'Other (custom)'
+] as const;
+
+export type JobTitle = typeof JOB_TITLES[number] | string;
 
 // =====================================================
 // PERMISSIONS
@@ -176,6 +199,14 @@ export interface LeaveType {
   daysAllowed: number;
   isPaid: boolean;
   requiresApproval: boolean;
+  requiresDocument: boolean;
+  carryForwardAllowed: boolean;
+  maxCarryForwardDays?: number;
+  appliesToAll: boolean;
+  appliesToRoles?: string[]; // e.g., ['Doctor', 'Nurse']
+  canBeOverridden: boolean;
+  notes?: string;
+  isDefault: boolean; // System default leave type
   createdAt: string;
   updatedAt: string;
 }
@@ -188,10 +219,24 @@ export interface LeaveBalance {
   totalDays: number;
   usedDays: number;
   pendingDays: number;
+  carryForwardDays: number;
   createdAt: string;
   updatedAt: string;
   // Joined
   leaveType?: LeaveType;
+}
+
+export interface StaffLeaveEntitlement {
+  id: string;
+  organizationId: string;
+  staffId: string;
+  useOrgDefaults: boolean;
+  customEntitlements?: {
+    leaveTypeId: string;
+    daysAllowed: number;
+  }[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface LeaveRequest {
@@ -202,14 +247,25 @@ export interface LeaveRequest {
   startDate: string;
   endDate: string;
   daysRequested: number;
+  isHalfDay: boolean;
+  halfDayType?: 'AM' | 'PM';
+  isPaid: boolean;
   reason?: string;
   status: LeaveStatus;
+  requestedBy: string; // uid of who submitted (could be staff or admin on behalf)
+  requestedByEmail?: string;
   reviewedBy?: string;
   reviewedAt?: string;
   approvedBy?: string;
   approvedAt?: string;
   approvalComment?: string;
+  rejectedBy?: string;
+  rejectedAt?: string;
   rejectionReason?: string;
+  documentUrl?: string;
+  balanceBeforeRequest?: number;
+  balanceAfterApproval?: number;
+  hasOverlappingShift?: boolean;
   createdAt: string;
   updatedAt: string;
   // Joined
@@ -485,6 +541,19 @@ export interface TodayAttendanceSummary {
   absentCount: number;
   onLeaveCount: number;
   totalHoursWorked: number;
+}
+
+export interface DashboardStats {
+  totalStaff: number;
+  maxStaff: number;
+  totalLocations: number;
+  maxLocations: number;
+  todaysShifts: number;
+  openShifts: number;
+  presentToday: number;
+  scheduledToday: number;
+  adminSeatsUsed: number;
+  maxAdmins: number;
 }
 
 // =====================================================

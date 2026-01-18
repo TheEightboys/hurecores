@@ -11,6 +11,7 @@ const DashboardHome: React.FC = () => {
     const [locations, setLocations] = useState<Location[]>([]);
     const [pendingLeave, setPendingLeave] = useState(0);
     const [todayAttendance, setTodayAttendance] = useState({ present: 0, scheduled: 0 });
+    const [payrollStatus, setPayrollStatus] = useState({ draft: 0, ready: 0, exported: 0 });
 
     useEffect(() => {
         loadDashboardData();
@@ -61,6 +62,9 @@ const DashboardHome: React.FC = () => {
             const pending = await leaveService.getPendingRequests(user.organizationId);
             setPendingLeave(pending.length);
 
+            // TODO: Get payroll status (placeholder for now)
+            setPayrollStatus({ draft: 0, ready: 0, exported: 0 });
+
         } catch (error) {
             console.error('Error loading dashboard:', error);
         } finally {
@@ -71,29 +75,30 @@ const DashboardHome: React.FC = () => {
     const getVerificationBadge = (status: string) => {
         switch (status) {
             case 'Verified':
-                return <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold uppercase">Approved</span>;
+                return <span className="bg-[#e0f2f1] text-[#0f766e] px-3 py-1 rounded-full text-xs font-bold uppercase border border-[#4fd1c5]/30">Approved</span>;
             case 'Pending':
-                return <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold uppercase">Pending Review</span>;
+                return <span className="bg-[#FEF3C7] text-[#B7791F] px-3 py-1 rounded-full text-xs font-bold uppercase border border-[#B7791F]/20">Pending Review</span>;
             case 'Rejected':
-                return <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold uppercase">Rejected</span>;
+                return <span className="bg-[#FEE2E2] text-[#9B2C2C] px-3 py-1 rounded-full text-xs font-bold uppercase">Rejected</span>;
             default:
-                return <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-bold uppercase">Unverified</span>;
+                return <span className="bg-[#F1F5F9] text-[#94A3B8] px-3 py-1 rounded-full text-xs font-bold uppercase">Unverified</span>;
         }
     };
 
     const quickActions = [
-        { label: 'View Schedule', icon: '📅', color: 'bg-blue-600', href: '#/employer/schedule' },
-        { label: 'Manage Staff', icon: '👥', color: 'bg-slate-800', href: '#/employer/staff' },
-        { label: 'Attendance', icon: '⏰', color: 'bg-slate-800', href: '#/employer/attendance' },
-        { label: 'Export Payroll', icon: '💰', color: 'bg-slate-800', href: '#/employer/payroll' },
+        { label: 'View Schedule', icon: '📅', color: 'bg-blue-600', href: '#/employer/schedule', requiresCompliance: false },
+        { label: 'Manage Staff', icon: '👥', color: 'bg-slate-800', href: '#/employer/staff', requiresCompliance: false },
+        { label: 'Attendance', icon: '⏰', color: 'bg-slate-800', href: '#/employer/attendance', requiresCompliance: false },
+        { label: 'Export Payroll', icon: '💰', color: 'bg-slate-800', href: '#/employer/payroll', requiresCompliance: true },
     ];
 
     const verifiedLocations = locations.filter(l => l.status === 'Verified').length;
+    const isCompliant = org?.orgStatus === 'Verified';
 
     if (loading) {
         return (
             <div className="p-8 max-w-7xl mx-auto flex items-center justify-center min-h-[400px]">
-                <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+                <div className="animate-spin w-8 h-8 border-4 border-[#4fd1c5] border-t-transparent rounded-full"></div>
             </div>
         );
     }
@@ -140,40 +145,49 @@ const DashboardHome: React.FC = () => {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 rounded-xl bg-blue-50 text-blue-600 text-2xl">👥</div>
+                        <div className="p-3 rounded-xl bg-[#F1F5F9] text-[#64748B] text-2xl">👥</div>
                     </div>
-                    <div className="text-3xl font-bold text-slate-900 mb-1">{stats?.totalStaff || 0}</div>
-                    <div className="text-sm font-semibold text-slate-500">Total Staff</div>
-                    <div className="text-xs text-slate-400 mt-1">of {stats?.maxStaff || 0} allowed</div>
+                    <div className="text-3xl font-bold text-[#0F172A] mb-1">{stats?.totalStaff || 0}</div>
+                    <div className="text-sm font-semibold text-[#475569]">Total Staff</div>
+                    <div className="text-xs text-[#94A3B8] mt-1">of {stats?.maxStaff || 0} allowed</div>
                 </div>
 
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 text-2xl">📍</div>
+                        <div className="p-3 rounded-xl bg-[#F1F5F9] text-[#64748B] text-2xl">📅</div>
                     </div>
-                    <div className="text-3xl font-bold text-slate-900 mb-1">{stats?.totalLocations || 0}</div>
-                    <div className="text-sm font-semibold text-slate-500">Locations</div>
-                    <div className="text-xs text-slate-400 mt-1">of {stats?.maxLocations || 0} allowed</div>
+                    <div className="text-3xl font-bold text-[#0F172A] mb-1">{stats?.todaysShifts || 0}</div>
+                    <div className="text-sm font-semibold text-[#475569]">Today's Shifts</div>
+                    <div className="mt-3 flex items-center justify-between text-xs">
+                        <span className="text-[#0f766e] font-medium">✓ {(stats?.todaysShifts || 0) - (stats?.openShifts || 0)} Assigned</span>
+                        <span className="text-[#B7791F] font-medium">○ {stats?.openShifts || 0} Open</span>
+                    </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 rounded-xl bg-purple-50 text-purple-600 text-2xl">📅</div>
+                        <div className="p-3 rounded-xl bg-[#F1F5F9] text-[#64748B] text-2xl">⏰</div>
                     </div>
-                    <div className="text-3xl font-bold text-slate-900 mb-1">{stats?.todaysShifts || 0}</div>
-                    <div className="text-sm font-semibold text-slate-500">Today's Shifts</div>
-                    <div className="text-xs text-slate-400 mt-1">{stats?.openShifts || 0} Open</div>
+                    <div className="text-3xl font-bold text-[#0F172A] mb-1">{todayAttendance.present}</div>
+                    <div className="text-sm font-semibold text-[#475569]">Present Today</div>
+                    <div className="mt-3 flex items-center justify-between text-xs">
+                        <span className="text-[#475569] font-medium">Clocked In: {todayAttendance.present}</span>
+                        <span className="text-[#94A3B8]">Expected: {todayAttendance.scheduled}</span>
+                    </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 text-2xl">⏰</div>
+                        <div className="p-3 rounded-xl bg-[#F1F5F9] text-[#64748B] text-2xl">💰</div>
                     </div>
-                    <div className="text-3xl font-bold text-slate-900 mb-1">{todayAttendance.present}</div>
-                    <div className="text-sm font-semibold text-slate-500">Present Today</div>
-                    <div className="text-xs text-slate-400 mt-1">of {todayAttendance.scheduled || stats?.totalStaff || 0} staff clocked in</div>
+                    <div className="text-3xl font-bold text-[#0F172A] mb-1">{payrollStatus.ready}</div>
+                    <div className="text-sm font-semibold text-[#475569]">Payroll Ready</div>
+                    <div className="mt-3 flex items-center gap-3 text-xs">
+                        <span className="text-[#94A3B8]">{payrollStatus.draft} Draft</span>
+                        <span className="text-[#0f766e]">{payrollStatus.exported} Exported</span>
+                    </div>
                 </div>
             </div>
 
@@ -206,7 +220,7 @@ const DashboardHome: React.FC = () => {
                                     </div>
                                 </div>
                                 {verifiedLocations === locations.length && locations.length > 0 ? (
-                                    <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold uppercase">Approved</span>
+                                    <span className="bg-[#e0f2f1] text-[#0f766e] px-3 py-1 rounded-full text-xs font-bold uppercase border border-[#4fd1c5]/30">Approved</span>
                                 ) : verifiedLocations > 0 ? (
                                     <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold uppercase">In Progress</span>
                                 ) : (
@@ -235,7 +249,7 @@ const DashboardHome: React.FC = () => {
                                 <span className="text-2xl font-bold text-slate-900">{pendingLeave}</span>
                             </div>
                             {pendingLeave > 0 && (
-                                <a href="#/employer/leave" className="text-sm text-blue-600 hover:text-blue-700 font-medium mt-2 inline-block">
+                                <a href="#/employer/leave" className="text-sm text-[#0f766e] hover:text-[#0d9488] font-medium mt-2 inline-block">
                                     Review requests →
                                 </a>
                             )}
@@ -251,30 +265,39 @@ const DashboardHome: React.FC = () => {
 
                 {/* Quick Actions & Tips */}
                 <div>
-                    <div className="bg-slate-900 text-white p-8 rounded-3xl shadow-xl mb-8">
+                    <div className="bg-[#1a2e35] text-[#e0f2f1] p-8 rounded-3xl shadow-xl mb-8 border border-[#4fd1c5]/20">
                         <h3 className="text-lg font-bold mb-6">Quick Actions</h3>
                         <div className="space-y-3">
-                            {quickActions.map((action, i) => (
-                                <a
-                                    key={i}
-                                    href={action.href}
-                                    className={`w-full py-4 rounded-xl font-bold flex items-center justify-center space-x-2 transition-all hover:bg-opacity-90 active:scale-95 ${action.color} text-white block text-center`}
-                                >
-                                    <span>{action.icon}</span>
-                                    <span>{action.label}</span>
-                                </a>
-                            ))}
+                            {quickActions.map((action, i) => {
+                                const isDisabled = action.requiresCompliance && !isCompliant;
+                                return (
+                                    <a
+                                        key={i}
+                                        href={isDisabled ? '#' : action.href}
+                                        onClick={(e) => isDisabled && e.preventDefault()}
+                                        className={`w-full py-4 rounded-xl font-bold flex items-center justify-center space-x-2 transition-all block text-center ${isDisabled
+                                            ? 'bg-[#F1F5F9] text-[#94A3B8] cursor-not-allowed opacity-60'
+                                            : 'bg-[#152428] text-[#4fd1c5] hover:bg-[#1a2e35] active:scale-95 shadow-md border border-[#4fd1c5]/20'
+                                            }`}
+                                        title={isDisabled ? 'Complete organization verification to unlock' : ''}
+                                    >
+                                        {isDisabled && <span className="mr-1">🔒</span>}
+                                        <span>{action.icon}</span>
+                                        <span>{action.label}</span>
+                                    </a>
+                                );
+                            })}
                         </div>
                     </div>
 
-                    <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl p-8 text-white">
-                        <h3 className="font-bold text-lg mb-2">Pro Tip</h3>
-                        <p className="text-blue-100 text-sm leading-relaxed mb-6">
+                    <div className="bg-[#FAF7F2] rounded-3xl p-8 border border-[#E2E8F0]">
+                        <h3 className="font-bold text-lg mb-2 text-[#0F172A]">💡 Pro Tip</h3>
+                        <p className="text-[#475569] text-sm leading-relaxed mb-6">
                             Complete your organization verification to unlock all features including scheduling, attendance tracking, and payroll management.
                         </p>
                         <a
                             href="#/employer/verification"
-                            className="text-sm font-bold bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors inline-block"
+                            className="text-sm font-bold bg-[#1a2e35] text-[#4fd1c5] hover:bg-[#152428] px-4 py-2 rounded-lg transition-colors inline-block shadow-md"
                         >
                             Get Verified
                         </a>

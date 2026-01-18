@@ -110,9 +110,9 @@ const EmployerTopBar: React.FC<EmployerTopBarProps> = ({
                 </button>
 
                 <div className="flex flex-col">
-                    <h1 className="text-lg font-bold text-slate-900 leading-tight">{orgName}</h1>
+                    <h1 className="text-lg font-bold text-[#1a2e35] leading-tight">{orgName}</h1>
                     <div className="flex items-center space-x-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-1.5 rounded border border-emerald-100">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#0f766e] bg-[#e0f2f1] px-1.5 rounded border border-[#4fd1c5]/30">
                             {planName} Plan
                         </span>
                     </div>
@@ -161,7 +161,7 @@ const EmployerTopBar: React.FC<EmployerTopBarProps> = ({
                                 {unreadCount > 0 && (
                                     <button
                                         onClick={handleMarkAllRead}
-                                        className="text-xs text-blue-600 font-medium hover:underline"
+                                        className="text-xs text-[#0f766e] font-medium hover:underline hover:text-[#0d9488]"
                                     >
                                         Mark all read
                                     </button>
@@ -178,10 +178,10 @@ const EmployerTopBar: React.FC<EmployerTopBarProps> = ({
                                         <button
                                             key={notif.id}
                                             onClick={() => handleNotificationClick(notif)}
-                                            className={`w-full text-left p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors ${!notif.read ? 'bg-blue-50/50' : ''}`}
+                                            className={`w-full text-left p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors ${!notif.read ? 'bg-teal-50/50' : ''}`}
                                         >
                                             <div className="flex items-start gap-3">
-                                                <div className={`w-2 h-2 rounded-full mt-2 ${!notif.read ? 'bg-blue-500' : 'bg-transparent'}`} />
+                                                <div className={`w-2 h-2 rounded-full mt-2 ${!notif.read ? 'bg-teal-500' : 'bg-transparent'}`} />
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-semibold text-slate-900 text-sm truncate">{notif.title}</p>
                                                     <p className="text-slate-500 text-xs mt-0.5 line-clamp-2">{notif.message}</p>
@@ -204,10 +204,10 @@ const EmployerTopBar: React.FC<EmployerTopBarProps> = ({
                         <div className="text-xs text-slate-500">{user?.role || user?.systemRole || 'Owner'}</div>
                     </div>
                     <button className="relative">
-                        <div className="w-9 h-9 rounded-full border border-slate-200 shadow-sm bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+                        <div className="w-9 h-9 rounded-full border border-slate-200 shadow-sm bg-gradient-to-br from-[#1a2e35] to-[#152428] flex items-center justify-center text-[#4fd1c5] font-bold text-sm">
                             {user?.name?.charAt(0) || 'U'}
                         </div>
-                        <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
+                        <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#4fd1c5] border-2 border-white rounded-full"></div>
                     </button>
 
                     {/* Dropdown Menu */}

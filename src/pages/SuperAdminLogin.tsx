@@ -47,12 +47,12 @@ const SuperAdminLogin: React.FC = () => {
             <div className="bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-700">
 
                 {/* Header */}
-                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 text-center">
+                <div className="bg-gradient-to-r from-teal-700 to-emerald-700 p-8 text-center">
                     <div className="mx-auto w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm">
                         <Shield className="w-8 h-8 text-white" />
                     </div>
                     <h1 className="text-2xl font-bold text-white mb-2">Super Admin Portal</h1>
-                    <p className="text-indigo-100 text-sm">Restricted Access Only</p>
+                    <p className="text-teal-100 text-sm">Restricted Access Only</p>
                 </div>
 
                 {/* Form */}
@@ -76,7 +76,7 @@ const SuperAdminLogin: React.FC = () => {
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full bg-slate-900 border border-slate-700 text-white pl-12 pr-4 py-3 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors placeholder-slate-600"
+                                    className="w-full bg-slate-900 border border-slate-700 text-white pl-12 pr-4 py-3 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors placeholder-slate-600"
                                     placeholder="admin@hurecore.com"
                                 />
                             </div>
@@ -93,7 +93,7 @@ const SuperAdminLogin: React.FC = () => {
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full bg-slate-900 border border-slate-700 text-white pl-12 pr-12 py-3 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors placeholder-slate-600"
+                                    className="w-full bg-slate-900 border border-slate-700 text-white pl-12 pr-12 py-3 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors placeholder-slate-600"
                                     placeholder="••••••••"
                                 />
                                 <button
@@ -118,7 +118,7 @@ const SuperAdminLogin: React.FC = () => {
                                     maxLength={6}
                                     value={pin}
                                     onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-                                    className="w-full bg-slate-900 border border-slate-700 text-white pl-12 pr-12 py-3 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors placeholder-slate-600 tracking-widest font-mono"
+                                    className="w-full bg-slate-900 border border-slate-700 text-white pl-12 pr-12 py-3 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors placeholder-slate-600 tracking-widest font-mono"
                                     placeholder="******"
                                 />
                                 <button
@@ -134,7 +134,7 @@ const SuperAdminLogin: React.FC = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+                            className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-teal-600/20 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                         >
                             {loading ? (
                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

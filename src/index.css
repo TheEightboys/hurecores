@@ -4,6 +4,164 @@
 
 @layer base {
     body {
-        @apply antialiased text-slate-900 bg-slate-50 font-sans;
+        @apply antialiased font-sans;
+        background-color: #F6F8FA;
+        /* App background grey */
+        color: #0F172A;
+        /* Primary text */
+    }
+}
+
+@layer utilities {
+    /* =====================================================
+       HURE ENTERPRISE COLOR SYSTEM
+       Compliance-grade teal/grey/white palette
+    ===================================================== */
+
+    /* Brand Teal Colors (CareStint Theme) */
+    .bg-hure-teal {
+        background-color: #1a2e35;
+    }
+
+    .bg-hure-teal-dark {
+        background-color: #152428;
+    }
+
+    .bg-hure-teal-muted {
+        background-color: #0f766e;
+    }
+
+    .text-hure-teal {
+        color: #1a2e35;
+    }
+
+    .text-hure-teal-dark {
+        color: #152428;
+    }
+
+    .text-hure-teal-muted {
+        color: #0f766e;
+    }
+
+    .border-hure-teal {
+        border-color: #1a2e35;
+    }
+
+    .hover\:bg-hure-teal-dark:hover {
+        background-color: #152428;
+    }
+
+    .hover\:text-hure-teal:hover {
+        color: #1a2e35;
+    }
+
+    /* Neutral Backgrounds */
+    .bg-app {
+        background-color: #F6F8FA;
+    }
+
+    .bg-panel {
+        background-color: #F1F5F9;
+    }
+
+    .bg-card {
+        background-color: #FFFFFF;
+    }
+
+    .bg-beige {
+        background-color: #FAF7F2;
+    }
+
+    /* Borders */
+    .border-neutral {
+        border-color: #E2E8F0;
+    }
+
+    .border-neutral-light {
+        border-color: #F1F5F9;
+    }
+
+    /* Text Colors */
+    .text-primary-dark {
+        color: #0F172A;
+    }
+
+    .text-secondary-dark {
+        color: #475569;
+    }
+
+    .text-muted-dark {
+        color: #94A3B8;
+    }
+
+    /* Status Colors - Muted */
+    .bg-status-success {
+        background-color: #e0f2f1;
+    }
+
+    .bg-status-success-light {
+        background-color: #e0f2f1;
+    }
+
+    .text-status-success {
+        color: #0f766e;
+    }
+
+    .bg-status-warning {
+        background-color: #B7791F;
+    }
+
+    .bg-status-warning-light {
+        background-color: #FEF3C7;
+    }
+
+    .text-status-warning {
+        color: #B7791F;
+    }
+
+    .bg-status-error {
+        background-color: #9B2C2C;
+    }
+
+    .bg-status-error-light {
+        background-color: #FEE2E2;
+    }
+
+    .text-status-error {
+        color: #9B2C2C;
+    }
+
+    /* Icon Colors */
+    .text-icon-default {
+        color: #64748B;
+    }
+
+    .text-icon-active {
+        color: #0f766e;
+    }
+
+    /* Button Styles */
+    .btn-primary {
+        background-color: #1a2e35;
+        color: #4fd1c5;
+        font-weight: 600;
+        transition: background-color 0.2s;
+    }
+
+    .btn-primary:hover {
+        background-color: #152428;
+    }
+
+    .btn-secondary {
+        background-color: transparent;
+        color: #0F172A;
+        border: 1px solid #CBD5E1;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+        background-color: #F1F5F9;
+        border-color: #94A3B8;
     }
 }

@@ -69,7 +69,14 @@ async function mapFirebaseUserToUser(firebaseUser: FirebaseUser): Promise<User |
         };
     } catch (error) {
         console.error('Error fetching user profile:', error);
-        return null;
+        // Return minimal user to prevent logout loop
+        return {
+            id: firebaseUser.uid,
+            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+            email: firebaseUser.email || '',
+            systemRole: 'EMPLOYEE' as SystemRole,
+            role: 'Staff'
+        };
     }
 }
 

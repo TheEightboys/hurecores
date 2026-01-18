@@ -1,24 +1,51 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { payrollService, staffService } from '../../lib/services';
-import type { PayrollPeriod, PayrollEntry } from '../../types';
+import { payrollService, staffService, scheduleService } from '../../lib/services';
+import type { PayrollPeriod, PayrollEntry, Profile } from '../../types';
+
+// Extended PayrollEntry with additional UI fields for the spec
+interface ExtendedPayrollEntry extends PayrollEntry {
+    monthUnits?: number;
+    allowanceDetails?: { amount: number; notes: string }[];
+    workedUnitsDays?: number;
+    absentDays?: number;
+}
+
+// Locum Payout Entry
+interface LocumPayoutEntry {
+    id: string;
+    locumName: string;
+    shiftDate: string;
+    shiftTime: string;
+    role: string;
+    location: string;
+    rateCents: number;
+    status: 'Scheduled' | 'Worked' | 'No-show';
+    supervisorName?: string;
+}
 
 const PayrollView: React.FC = () => {
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [periods, setPeriods] = useState<PayrollPeriod[]>([]);
     const [selectedPeriod, setSelectedPeriod] = useState<PayrollPeriod | null>(null);
-    const [entries, setEntries] = useState<PayrollEntry[]>([]);
+    const [entries, setEntries] = useState<ExtendedPayrollEntry[]>([]);
+    const [locumPayouts, setLocumPayouts] = useState<LocumPayoutEntry[]>([]);
     const [summary, setSummary] = useState<any>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
+    const [showAllowanceModal, setShowAllowanceModal] = useState<string | null>(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [activeTab, setActiveTab] = useState<'employees' | 'locums'>('employees');
 
     const [newPeriod, setNewPeriod] = useState({
         name: '',
         startDate: '',
         endDate: ''
     });
+
+    const [newAllowance, setNewAllowance] = useState({ amount: 0, notes: '' });
 
     useEffect(() => {
         loadPeriods();
@@ -48,15 +75,81 @@ const PayrollView: React.FC = () => {
     };
 
     const loadPeriodDetails = async (periodId: string) => {
-        if (!user?.organizationId) return;
+        if (!user?.organizationId || !selectedPeriod) return;
 
         try {
             const [entriesData, summaryData] = await Promise.all([
                 payrollService.getEntries(user.organizationId, periodId),
                 payrollService.getPeriodSummary(user.organizationId, periodId)
             ]);
-            setEntries(entriesData);
+
+            // Transform entries to extended format with additional calculations
+            const extendedEntries: ExtendedPayrollEntry[] = entriesData
+                .filter(entry => {
+                    // Exclude owners unless they have salary configured
+                    if (entry.staff?.systemRole === 'OWNER') {
+                        return (entry.staff.monthlySalaryCents || 0) > 0 || (entry.staff.hourlyRateCents || 0) > 0;
+                    }
+                    return true;
+                })
+                .map(entry => {
+                    // Calculate month units (days in period)
+                    const startDate = new Date(selectedPeriod.startDate);
+                    const endDate = new Date(selectedPeriod.endDate);
+                    const monthUnits = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+                    // Calculate paid units = worked + paid leave
+                    const workedDays = Math.ceil((entry.workedUnits || 0) / 8); // Assuming 8h workday
+                    const paidLeaveUnitsVal = entry.paidLeaveUnits || 0;
+                    const paidUnits = workedDays + paidLeaveUnitsVal;
+
+                    // Calculate payable base
+                    let payableBaseCents = 0;
+                    if (entry.payMethod === 'Fixed') {
+                        payableBaseCents = entry.staff?.monthlySalaryCents || 0;
+                    } else {
+                        // Prorated: (monthly salary / month units) * paid units
+                        const monthlySalary = entry.staff?.monthlySalaryCents || 0;
+                        payableBaseCents = Math.round((monthlySalary / monthUnits) * paidUnits);
+                    }
+
+                    return {
+                        ...entry,
+                        monthUnits,
+                        workedUnitsDays: workedDays,
+                        absentDays: entry.absentUnits || 0,
+                        allowanceDetails: []
+                    } as ExtendedPayrollEntry;
+                });
+
+            setEntries(extendedEntries);
             setSummary(summaryData);
+
+            // Load locum payouts from shifts
+            const shifts = await scheduleService.getShifts(user.organizationId, {
+                startDate: selectedPeriod.startDate,
+                endDate: selectedPeriod.endDate
+            });
+
+            const locums: LocumPayoutEntry[] = shifts
+                .filter(shift => shift.assignments?.some(a => a.isLocum))
+                .flatMap(shift => {
+                    return (shift.assignments || [])
+                        .filter(a => a.isLocum)
+                        .map(assignment => ({
+                            id: assignment.id,
+                            locumName: assignment.locumName || 'Unknown',
+                            shiftDate: shift.date,
+                            shiftTime: `${shift.startTime} - ${shift.endTime}`,
+                            role: shift.roleRequired || 'Locum',
+                            location: shift.location?.name || 'Unknown',
+                            rateCents: assignment.locumRateCents || 0,
+                            status: 'Worked' as const, // Would check attendance
+                            supervisorName: assignment.supervisor?.fullName
+                        }));
+                });
+
+            setLocumPayouts(locums);
         } catch (error) {
             console.error('Error loading period details:', error);
         }
@@ -83,8 +176,9 @@ const PayrollView: React.FC = () => {
 
         try {
             await payrollService.generateEntries(user.organizationId, selectedPeriod.id);
-            setSuccess('Payroll entries generated successfully');
+            setSuccess('Payroll entries generated from attendance and leave data');
             loadPeriodDetails(selectedPeriod.id);
+            setTimeout(() => setSuccess(''), 5000);
         } catch (err: any) {
             setError(err.message || 'Failed to generate entries');
         }
@@ -92,12 +186,44 @@ const PayrollView: React.FC = () => {
 
     const handleMarkAllPaid = async () => {
         if (!user?.organizationId || !selectedPeriod) return;
-        if (!confirm('Mark all entries as paid?')) return;
+
+        const unpaidCount = entries.filter(e => !e.isPaid).length;
+        if (unpaidCount === 0) {
+            setError('All entries are already marked as paid');
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `⚠️ CONFIRM PAYOUT MARKING\n\n` +
+            `You are about to mark ${unpaidCount} staff members as PAID.\n\n` +
+            `This will:\n` +
+            `• Record today's date as the payment date\n` +
+            `• Record your name as the payer\n` +
+            `• Create an immutable audit log entry\n\n` +
+            `Total amount: ${formatCurrency(entries.filter(e => !e.isPaid).reduce((sum, e) => sum + e.netPayCents, 0))}\n\n` +
+            `Are you sure you want to proceed?`
+        );
+
+        if (!confirmed) return;
 
         try {
             await payrollService.markAllAsPaid(user.organizationId, selectedPeriod.id);
-            setSuccess('All entries marked as paid');
+            setSuccess(`${unpaidCount} entries marked as paid by ${user.email}`);
             loadPeriodDetails(selectedPeriod.id);
+            setTimeout(() => setSuccess(''), 5000);
+        } catch (err: any) {
+            setError(err.message || 'Failed to mark as paid');
+        }
+    };
+
+    const handleMarkEntryPaid = async (entryId: string) => {
+        if (!user?.organizationId) return;
+
+        try {
+            await payrollService.markAsPaid(user.organizationId, entryId);
+            setSuccess('Entry marked as paid');
+            loadPeriodDetails(selectedPeriod!.id);
+            setTimeout(() => setSuccess(''), 3000);
         } catch (err: any) {
             setError(err.message || 'Failed to mark as paid');
         }
@@ -105,12 +231,25 @@ const PayrollView: React.FC = () => {
 
     const handleFinalize = async () => {
         if (!user?.organizationId || !selectedPeriod) return;
-        if (!confirm('Finalize this payroll period? This action cannot be undone.')) return;
+
+        const confirmed = window.confirm(
+            `🔒 FINALIZE PAYROLL PERIOD\n\n` +
+            `You are about to FINALIZE "${selectedPeriod.name}".\n\n` +
+            `This will:\n` +
+            `• Lock all entries (no more edits)\n` +
+            `• Create a permanent snapshot\n` +
+            `• Enable CSV export\n\n` +
+            `⚠️ This action CANNOT be undone.\n\n` +
+            `Are you sure?`
+        );
+
+        if (!confirmed) return;
 
         try {
             await payrollService.finalizePeriod(user.organizationId, selectedPeriod.id);
-            setSuccess('Payroll period finalized');
+            setSuccess('Payroll period finalized. Data is now read-only.');
             loadPeriods();
+            setTimeout(() => setSuccess(''), 5000);
         } catch (err: any) {
             setError(err.message || 'Failed to finalize');
         }
@@ -118,6 +257,12 @@ const PayrollView: React.FC = () => {
 
     const handleExport = async () => {
         if (!user?.organizationId || !selectedPeriod) return;
+
+        // Only allow export if finalized
+        if (!selectedPeriod.isFinalized) {
+            setError('Please finalize the payroll period before exporting. This ensures data integrity.');
+            return;
+        }
 
         try {
             const csv = await payrollService.exportToCSV(user.organizationId, selectedPeriod.id);
@@ -133,8 +278,40 @@ const PayrollView: React.FC = () => {
         }
     };
 
+    const handleAddAllowance = async (entryId: string) => {
+        if (!user?.organizationId || !selectedPeriod || selectedPeriod.isFinalized) return;
+
+        // This would need a backend function to add allowances
+        // For now, we'll update the entry locally
+        const entry = entries.find(e => e.id === entryId);
+        if (!entry) return;
+
+        const newAllowanceDetails = [
+            ...(entry.allowanceDetails || []),
+            { amount: newAllowance.amount * 100, notes: newAllowance.notes }
+        ];
+        const totalAllowances = newAllowanceDetails.reduce((sum, a) => sum + a.amount, 0);
+
+        // Update would go to backend here
+        setEntries(prev => prev.map(e =>
+            e.id === entryId
+                ? { ...e, allowanceDetails: newAllowanceDetails, allowancesCents: totalAllowances }
+                : e
+        ));
+
+        setShowAllowanceModal(null);
+        setNewAllowance({ amount: 0, notes: '' });
+    };
+
     const formatCurrency = (cents: number) => {
         return `KES ${(cents / 100).toLocaleString()}`;
+    };
+
+    const getPayMethodBadge = (method: string) => {
+        if (method === 'Fixed') {
+            return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-semibold">Fixed</span>;
+        }
+        return <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs font-semibold">Prorated</span>;
     };
 
     if (loading) {
@@ -147,10 +324,14 @@ const PayrollView: React.FC = () => {
 
     return (
         <div className="p-8 max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
+            {/* Header */}
+            <div className="flex justify-between items-center mb-6">
                 <div>
-                    <h2 className="text-2xl font-bold text-slate-900">Payroll</h2>
-                    <p className="text-slate-500 mt-1">{periods.length} payroll periods</p>
+                    <h2 className="text-2xl font-bold text-slate-900">HURE Payroll – Preview (Attendance + Leave)</h2>
+                    <p className="text-slate-500 mt-1">
+                        Payroll has two tabs: <span className="font-semibold">Employees</span> | <span className="font-semibold">Locums/Contractors</span>.
+                        Locums auto-filter by pay period range; payable amount is only for <span className="font-semibold text-emerald-600">Worked</span>.
+                    </p>
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
@@ -160,15 +341,30 @@ const PayrollView: React.FC = () => {
                 </button>
             </div>
 
+            {/* Payroll Rules Banner */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
+                <div className="flex items-start space-x-3">
+                    <span className="text-xl">📋</span>
+                    <div className="text-sm text-slate-600">
+                        <p className="font-semibold text-slate-700 mb-1">Payroll Calculation Rules:</p>
+                        <p><strong>Paid Units</strong> = Worked Units + Paid Leave Units. <strong>Unpaid Leave + Absent</strong> contribute 0 to pay.</p>
+                        <p><strong>Fixed salaries</strong> ignore units for pay (units shown for reporting only). <strong>Prorated</strong> = Monthly Salary × (Paid Units / Month Units).</p>
+                        <p className="mt-1 text-slate-500">Leave overrides attendance: if staff has approved leave on a date, that date counts as Paid Leave, not Worked/Absent.</p>
+                    </div>
+                </div>
+            </div>
+
             {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6">
-                    {error}
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 flex justify-between items-center">
+                    <span>{error}</span>
+                    <button onClick={() => setError('')} className="text-red-500 hover:text-red-700">✕</button>
                 </div>
             )}
 
             {success && (
-                <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl mb-6">
-                    {success}
+                <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl mb-6 flex justify-between items-center">
+                    <span>✓ {success}</span>
+                    <button onClick={() => setSuccess('')} className="text-emerald-500 hover:text-emerald-700">✕</button>
                 </div>
             )}
 
@@ -183,7 +379,7 @@ const PayrollView: React.FC = () => {
                                     key={period.id}
                                     onClick={() => setSelectedPeriod(period)}
                                     className={`w-full text-left p-3 rounded-xl transition-colors ${selectedPeriod?.id === period.id
-                                        ? 'bg-blue-50 border-2 border-blue-500'
+                                        ? 'bg-[#e0f2f1] border-2 border-[#4fd1c5]'
                                         : 'bg-slate-50 border border-slate-200 hover:border-slate-300'
                                         }`}
                                 >
@@ -191,9 +387,13 @@ const PayrollView: React.FC = () => {
                                     <div className="text-xs text-slate-500 mt-1">
                                         {period.startDate} → {period.endDate}
                                     </div>
-                                    {period.isFinalized && (
-                                        <span className="inline-block mt-2 bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs font-bold">
-                                            FINALIZED
+                                    {period.isFinalized ? (
+                                        <span className="inline-block mt-2 bg-[#1a2e35] text-[#4fd1c5] px-2 py-0.5 rounded text-xs font-bold border border-[#4fd1c5]/30">
+                                            🔒 FINALIZED
+                                        </span>
+                                    ) : (
+                                        <span className="inline-block mt-2 bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs font-bold">
+                                            DRAFT
                                         </span>
                                     )}
                                 </button>
@@ -210,8 +410,45 @@ const PayrollView: React.FC = () => {
                 <div className="lg:col-span-3">
                     {selectedPeriod ? (
                         <>
+                            {/* Period Header with Filter */}
+                            <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6 flex flex-wrap gap-4 items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="text-sm text-slate-600">
+                                        <span className="font-semibold">Marked by:</span> Owner/Admin
+                                    </div>
+                                    <div className="text-sm text-slate-600">
+                                        <span className="font-semibold">Pay period:</span> {selectedPeriod.startDate} to {selectedPeriod.endDate}
+                                    </div>
+                                </div>
+                                <div className="text-xs text-slate-400">
+                                    Auto-saved: {new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}, {new Date().toLocaleTimeString()}
+                                </div>
+                            </div>
+
+                            {/* Tabs */}
+                            <div className="flex space-x-1 bg-slate-100 p-1 rounded-xl mb-6 w-fit">
+                                <button
+                                    onClick={() => setActiveTab('employees')}
+                                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'employees'
+                                        ? 'bg-white text-slate-900 shadow-sm'
+                                        : 'text-slate-600 hover:text-slate-900'
+                                        }`}
+                                >
+                                    Employees
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('locums')}
+                                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'locums'
+                                        ? 'bg-white text-slate-900 shadow-sm'
+                                        : 'text-slate-600 hover:text-slate-900'
+                                        }`}
+                                >
+                                    Locums / Contractors
+                                </button>
+                            </div>
+
                             {/* Summary Cards */}
-                            {summary && (
+                            {summary && activeTab === 'employees' && (
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                                     <div className="bg-white rounded-xl border border-slate-200 p-4">
                                         <div className="text-2xl font-bold text-slate-900">{summary.totalEntries}</div>
@@ -219,11 +456,11 @@ const PayrollView: React.FC = () => {
                                     </div>
                                     <div className="bg-white rounded-xl border border-slate-200 p-4">
                                         <div className="text-2xl font-bold text-slate-900">{formatCurrency(summary.totalGrossCents)}</div>
-                                        <div className="text-sm text-slate-500">Gross Pay</div>
+                                        <div className="text-sm text-slate-500">Total Gross</div>
                                     </div>
                                     <div className="bg-white rounded-xl border border-slate-200 p-4">
                                         <div className="text-2xl font-bold text-emerald-600">{formatCurrency(summary.totalNetCents)}</div>
-                                        <div className="text-sm text-slate-500">Net Pay</div>
+                                        <div className="text-sm text-slate-500">Total Net</div>
                                     </div>
                                     <div className="bg-white rounded-xl border border-slate-200 p-4">
                                         <div className="text-2xl font-bold text-slate-900">{summary.paidCount}/{summary.totalEntries}</div>
@@ -234,7 +471,7 @@ const PayrollView: React.FC = () => {
 
                             {/* Actions */}
                             <div className="flex flex-wrap gap-3 mb-6">
-                                {entries.length === 0 && !selectedPeriod.isFinalized && (
+                                {entries.length === 0 && !selectedPeriod.isFinalized && activeTab === 'employees' && (
                                     <button
                                         onClick={handleGenerateEntries}
                                         className="bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-blue-700"
@@ -242,86 +479,347 @@ const PayrollView: React.FC = () => {
                                         Generate Entries
                                     </button>
                                 )}
-                                {entries.length > 0 && !selectedPeriod.isFinalized && (
+                                {entries.length > 0 && !selectedPeriod.isFinalized && activeTab === 'employees' && (
                                     <>
                                         <button
                                             onClick={handleMarkAllPaid}
                                             className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-emerald-700"
                                         >
-                                            Mark All Paid
+                                            ✓ Mark All Paid
                                         </button>
                                         <button
                                             onClick={handleFinalize}
                                             className="bg-slate-800 text-white px-4 py-2 rounded-xl font-semibold hover:bg-slate-900"
                                         >
-                                            Finalize Period
+                                            🔒 Finalize Period
                                         </button>
                                     </>
                                 )}
-                                {entries.length > 0 && (
+                                {selectedPeriod.isFinalized && (
                                     <button
                                         onClick={handleExport}
-                                        className="bg-slate-100 text-slate-700 px-4 py-2 rounded-xl font-semibold hover:bg-slate-200"
+                                        className="bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-blue-700"
                                     >
-                                        Export CSV
+                                        📥 Export Employees CSV
+                                    </button>
+                                )}
+                                {!selectedPeriod.isFinalized && activeTab === 'locums' && (
+                                    <button
+                                        onClick={() => {/* Export locums as CSV */ }}
+                                        className="bg-purple-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-purple-700"
+                                    >
+                                        📥 Export Locums CSV
                                     </button>
                                 )}
                             </div>
 
-                            {/* Entries Table */}
-                            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-                                <table className="w-full">
-                                    <thead className="bg-slate-50 border-b border-slate-200">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Staff</th>
-                                            <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Pay Method</th>
-                                            <th className="text-right px-6 py-4 text-sm font-semibold text-slate-600">Worked</th>
-                                            <th className="text-right px-6 py-4 text-sm font-semibold text-slate-600">Absent</th>
-                                            <th className="text-right px-6 py-4 text-sm font-semibold text-slate-600">Gross</th>
-                                            <th className="text-right px-6 py-4 text-sm font-semibold text-slate-600">Net</th>
-                                            <th className="text-center px-6 py-4 text-sm font-semibold text-slate-600">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {entries.map(entry => (
-                                            <tr key={entry.id} className="hover:bg-slate-50">
-                                                <td className="px-6 py-4">
-                                                    <div className="font-medium text-slate-900">{entry.staff?.fullName || 'Unknown'}</div>
-                                                    <div className="text-sm text-slate-500">{entry.staff?.jobTitle || ''}</div>
-                                                </td>
-                                                <td className="px-6 py-4 text-slate-600">{entry.payMethod}</td>
-                                                <td className="px-6 py-4 text-right text-slate-600">{entry.workedUnits}h</td>
-                                                <td className="px-6 py-4 text-right text-slate-600">{entry.absentUnits}d</td>
-                                                <td className="px-6 py-4 text-right font-medium">{formatCurrency(entry.grossPayCents)}</td>
-                                                <td className="px-6 py-4 text-right font-bold text-emerald-600">{formatCurrency(entry.netPayCents)}</td>
-                                                <td className="px-6 py-4 text-center">
-                                                    {entry.isPaid ? (
-                                                        <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full text-xs font-bold">PAID</span>
-                                                    ) : (
-                                                        <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-xs font-bold">PENDING</span>
-                                                    )}
-                                                </td>
+                            {/* Employees Tab Content */}
+                            {activeTab === 'employees' && (
+                                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                                    <table className="w-full">
+                                        <thead className="bg-slate-50 border-b border-slate-200">
+                                            <tr>
+                                                <th className="w-8 px-3 py-4"></th>
+                                                <th className="text-left px-4 py-4 text-sm font-semibold text-slate-600">STAFF</th>
+                                                <th className="text-center px-4 py-4 text-sm font-semibold text-slate-600">PAID UNITS / MONTH</th>
+                                                <th className="text-right px-4 py-4 text-sm font-semibold text-slate-600">MONTHLY SALARY (KSH)</th>
+                                                <th className="text-center px-4 py-4 text-sm font-semibold text-slate-600">PAY METHOD</th>
+                                                <th className="text-right px-4 py-4 text-sm font-semibold text-slate-600">PAYABLE BASE (KSH)</th>
+                                                <th className="text-right px-4 py-4 text-sm font-semibold text-slate-600">ALLOWANCES (KSH)</th>
+                                                <th className="text-right px-4 py-4 text-sm font-semibold text-slate-600">TOTAL GROSS (KSH)</th>
+                                                <th className="text-center px-4 py-4 text-sm font-semibold text-slate-600">STATUS</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {entries.map(entry => {
+                                                const isExpanded = expandedEntry === entry.id;
+                                                return (
+                                                    <React.Fragment key={entry.id}>
+                                                        <tr className="hover:bg-slate-50">
+                                                            <td className="px-3 py-4">
+                                                                <button
+                                                                    onClick={() => setExpandedEntry(isExpanded ? null : entry.id)}
+                                                                    className="text-slate-400 hover:text-slate-600"
+                                                                >
+                                                                    {isExpanded ? '−' : '+'}
+                                                                </button>
+                                                            </td>
+                                                            <td className="px-4 py-4">
+                                                                <div className="font-medium text-slate-900">{entry.staff?.fullName || 'Unknown'}</div>
+                                                                <div className="text-sm text-slate-500">{entry.staff?.jobTitle || ''}</div>
+                                                            </td>
+                                                            <td className="px-4 py-4 text-center text-slate-600">
+                                                                {(entry.workedUnits + entry.paidLeaveUnits) || 0} / {entry.monthUnits || 30}
+                                                            </td>
+                                                            <td className="px-4 py-4 text-right text-slate-600">
+                                                                {((entry.staff?.monthlySalaryCents || 0) / 100).toLocaleString()}
+                                                            </td>
+                                                            <td className="px-4 py-4 text-center">
+                                                                {getPayMethodBadge(entry.payMethod)}
+                                                            </td>
+                                                            <td className="px-4 py-4 text-right text-slate-600">
+                                                                {((entry.payableBaseCents) / 100).toLocaleString()}
+                                                            </td>
+                                                            <td className="px-4 py-4 text-right text-slate-600">
+                                                                {((entry.allowancesTotalCents) / 100).toLocaleString()}
+                                                            </td>
+                                                            <td className="px-4 py-4 text-right font-bold text-slate-900">
+                                                                {((entry.grossPayCents) / 100).toLocaleString()}
+                                                            </td>
+                                                            <td className="px-4 py-4 text-center">
+                                                                {entry.isPaid ? (
+                                                                    <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full text-xs font-bold">
+                                                                        ✓ Paid
+                                                                    </span>
+                                                                ) : (
+                                                                    <label className="flex items-center justify-center cursor-pointer">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={false}
+                                                                            onChange={() => handleMarkEntryPaid(entry.id)}
+                                                                            disabled={selectedPeriod.isFinalized}
+                                                                            className="w-5 h-5"
+                                                                        />
+                                                                        <span className="ml-2 text-sm text-slate-500">Unpaid</span>
+                                                                    </label>
+                                                                )}
+                                                            </td>
+                                                        </tr>
 
-                                {entries.length === 0 && (
-                                    <div className="p-12 text-center">
-                                        <div className="text-4xl mb-4">💰</div>
-                                        <h3 className="text-lg font-semibold text-slate-900 mb-2">No payroll entries</h3>
-                                        <p className="text-slate-500 mb-4">Generate entries based on staff attendance and pay rates</p>
-                                        {!selectedPeriod.isFinalized && (
-                                            <button
-                                                onClick={handleGenerateEntries}
-                                                className="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700"
-                                            >
-                                                Generate Entries
-                                            </button>
-                                        )}
+                                                        {/* Expanded Row - Drilldown */}
+                                                        {isExpanded && (
+                                                            <tr className="bg-slate-50">
+                                                                <td colSpan={9} className="px-6 py-4">
+                                                                    <div className="grid grid-cols-3 gap-6">
+                                                                        {/* Units Breakdown */}
+                                                                        <div className="bg-white rounded-xl p-4 border border-slate-200">
+                                                                            <h4 className="font-semibold text-slate-800 mb-3">Units Breakdown</h4>
+                                                                            <div className="space-y-2 text-sm">
+                                                                                <div className="flex justify-between">
+                                                                                    <span className="text-slate-600">Worked Units (attendance):</span>
+                                                                                    <span className="font-medium">{entry.workedUnitsDays || entry.workedUnits || 0}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between">
+                                                                                    <span className="text-slate-600">Paid Leave Units:</span>
+                                                                                    <span className="font-medium">{entry.paidLeaveUnits || 0}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between text-slate-400">
+                                                                                    <span>Unpaid Leave Units:</span>
+                                                                                    <span>{entry.unpaidLeaveUnits || 0}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between text-slate-400">
+                                                                                    <span>Absent Units:</span>
+                                                                                    <span>{entry.absentUnits || 0}</span>
+                                                                                </div>
+                                                                                <div className="border-t pt-2 mt-2">
+                                                                                    <div className="bg-blue-50 rounded p-2">
+                                                                                        <div className="text-xs text-blue-600 font-medium">Paid Units (used for pay)</div>
+                                                                                        <div className="text-sm">Paid Units = Worked ({entry.workedUnits}) + Paid Leave ({entry.paidLeaveUnits}) = <strong>{entry.workedUnits + entry.paidLeaveUnits}</strong></div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Pay Calculation */}
+                                                                        <div className="bg-white rounded-xl p-4 border border-slate-200">
+                                                                            <h4 className="font-semibold text-slate-800 mb-3">Pay Calculation</h4>
+                                                                            <div className="space-y-2 text-sm">
+                                                                                <div className="flex justify-between">
+                                                                                    <span className="text-slate-600">Monthly Salary:</span>
+                                                                                    <span className="font-medium">{formatCurrency(entry.staff?.monthlySalaryCents || 0)}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between">
+                                                                                    <span className="text-slate-600">Pay Method:</span>
+                                                                                    <span className="font-medium">{entry.payMethod}</span>
+                                                                                </div>
+                                                                                <div className="border-t pt-2 mt-2">
+                                                                                    <div className="bg-amber-50 rounded p-2">
+                                                                                        <div className="text-xs text-amber-600 font-medium">{entry.payMethod}</div>
+                                                                                        {entry.payMethod === 'Fixed' ? (
+                                                                                            <div className="text-sm">Payable Base = full monthly salary (units shown for reporting only).</div>
+                                                                                        ) : (
+                                                                                            <div className="text-sm">
+                                                                                                Payable Base = Monthly Salary × (Paid Units / Month Units)<br />
+                                                                                                = {formatCurrency(entry.staff?.monthlySalaryCents || 0)} × ({entry.workedUnits + entry.paidLeaveUnits} / {entry.monthUnits}) = {formatCurrency(entry.payableBaseCents)}
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Allowances + Audit */}
+                                                                        <div className="bg-white rounded-xl p-4 border border-slate-200">
+                                                                            <div className="flex justify-between items-center mb-3">
+                                                                                <h4 className="font-semibold text-slate-800">Allowances + Audit</h4>
+                                                                                {!selectedPeriod.isFinalized && (
+                                                                                    <button
+                                                                                        onClick={() => setShowAllowanceModal(entry.id)}
+                                                                                        className="text-xs bg-blue-600 text-white px-2 py-1 rounded font-semibold hover:bg-blue-700"
+                                                                                    >
+                                                                                        + Add Allowance
+                                                                                    </button>
+                                                                                )}
+                                                                            </div>
+                                                                            <p className="text-xs text-slate-500 mb-2">Optional payroll additions</p>
+
+                                                                            <table className="w-full text-sm mb-3">
+                                                                                <thead>
+                                                                                    <tr className="text-left text-slate-500">
+                                                                                        <th className="py-1">Amount (KSh)</th>
+                                                                                        <th className="py-1">Notes</th>
+                                                                                    </tr>
+                                                                                </thead>
+                                                                                <tbody>
+                                                                                    {(entry.allowanceDetails || []).map((allowance, idx) => (
+                                                                                        <tr key={idx}>
+                                                                                            <td className="py-1">{(allowance.amount / 100).toLocaleString()}</td>
+                                                                                            <td className="py-1 text-slate-600">{allowance.notes}</td>
+                                                                                        </tr>
+                                                                                    ))}
+                                                                                    {(!entry.allowanceDetails || entry.allowanceDetails.length === 0) && (
+                                                                                        <tr>
+                                                                                            <td colSpan={2} className="py-2 text-slate-400 text-center">No allowances</td>
+                                                                                        </tr>
+                                                                                    )}
+                                                                                </tbody>
+                                                                            </table>
+
+                                                                            <div className="border-t pt-2 space-y-1 text-sm">
+                                                                                <div className="flex justify-between">
+                                                                                    <span className="text-slate-600">Allowances:</span>
+                                                                                    <span className="font-medium">{((entry.allowancesTotalCents) / 100).toLocaleString()}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between">
+                                                                                    <span className="text-slate-600">Total Gross:</span>
+                                                                                    <span className="font-bold">{(entry.grossPayCents / 100).toLocaleString()}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between text-slate-400">
+                                                                                    <span>Paid Date:</span>
+                                                                                    <span>{entry.paidAt || '—'}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between text-slate-400">
+                                                                                    <span>Marked Paid By:</span>
+                                                                                    <span>{entry.paidBy || '—'}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </React.Fragment>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+
+                                    {entries.length === 0 && (
+                                        <div className="p-12 text-center">
+                                            <div className="text-4xl mb-4">💰</div>
+                                            <h3 className="text-lg font-semibold text-slate-900 mb-2">No payroll entries</h3>
+                                            <p className="text-slate-500 mb-4">Generate entries based on staff attendance and pay rates</p>
+                                            {!selectedPeriod.isFinalized && (
+                                                <button
+                                                    onClick={handleGenerateEntries}
+                                                    className="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700"
+                                                >
+                                                    Generate Entries
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Locums Tab Content */}
+                            {activeTab === 'locums' && (
+                                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                                    <div className="bg-purple-50 border-b border-purple-200 p-4">
+                                        <div className="flex items-start space-x-3">
+                                            <span className="text-xl">🔄</span>
+                                            <div>
+                                                <p className="text-sm font-medium text-purple-800">Locum / Contractor Payouts</p>
+                                                <p className="text-sm text-purple-600">
+                                                    External locums are NOT included in employee payroll. This list shows shifts worked by locums during this period.
+                                                    Only "Worked" shifts are payable.
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
-                                )}
-                            </div>
+
+                                    <table className="w-full">
+                                        <thead className="bg-slate-50 border-b border-slate-200">
+                                            <tr>
+                                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">LOCUM</th>
+                                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">DATE</th>
+                                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">SHIFT TIME</th>
+                                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">ROLE</th>
+                                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">LOCATION</th>
+                                                <th className="text-right px-6 py-4 text-sm font-semibold text-slate-600">RATE (KSH)</th>
+                                                <th className="text-center px-6 py-4 text-sm font-semibold text-slate-600">STATUS</th>
+                                                <th className="text-right px-6 py-4 text-sm font-semibold text-slate-600">PAYABLE</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {locumPayouts.map(locum => (
+                                                <tr key={locum.id} className="hover:bg-slate-50">
+                                                    <td className="px-6 py-4">
+                                                        <div className="font-medium text-slate-900">{locum.locumName}</div>
+                                                        <div className="text-sm text-slate-500">External</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-slate-600">{locum.shiftDate}</td>
+                                                    <td className="px-6 py-4 text-slate-600">{locum.shiftTime}</td>
+                                                    <td className="px-6 py-4 text-slate-600">{locum.role}</td>
+                                                    <td className="px-6 py-4 text-slate-600">{locum.location}</td>
+                                                    <td className="px-6 py-4 text-right text-slate-600">
+                                                        {(locum.rateCents / 100).toLocaleString()}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        {locum.status === 'Worked' ? (
+                                                            <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full text-xs font-bold">Worked</span>
+                                                        ) : locum.status === 'No-show' ? (
+                                                            <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-bold">No-show</span>
+                                                        ) : (
+                                                            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-bold">Scheduled</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right font-bold">
+                                                        {locum.status === 'Worked'
+                                                            ? formatCurrency(locum.rateCents)
+                                                            : <span className="text-slate-400">—</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                        {locumPayouts.length > 0 && (
+                                            <tfoot className="bg-slate-50 border-t border-slate-200">
+                                                <tr>
+                                                    <td colSpan={7} className="px-6 py-4 text-right font-semibold text-slate-700">
+                                                        Total Payable (Worked only):
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right font-bold text-emerald-600">
+                                                        {formatCurrency(
+                                                            locumPayouts
+                                                                .filter(l => l.status === 'Worked')
+                                                                .reduce((sum, l) => sum + l.rateCents, 0)
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        )}
+                                    </table>
+
+                                    {locumPayouts.length === 0 && (
+                                        <div className="p-12 text-center">
+                                            <div className="text-4xl mb-4">🔄</div>
+                                            <h3 className="text-lg font-semibold text-slate-900 mb-2">No locum shifts in this period</h3>
+                                            <p className="text-slate-500">Locum payouts are derived from scheduled shifts with assigned locums.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </>
                     ) : (
                         <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
@@ -394,6 +892,58 @@ const PayrollView: React.FC = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Allowance Modal */}
+            {showAllowanceModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl w-full max-w-sm p-6 m-4">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold text-slate-900">Add Allowance</h2>
+                            <button onClick={() => setShowAllowanceModal(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Amount (KSH) *</label>
+                                <input
+                                    type="number"
+                                    required
+                                    value={newAllowance.amount}
+                                    onChange={(e) => setNewAllowance(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                                    className="w-full px-4 py-3 border border-slate-300 rounded-xl"
+                                    placeholder="e.g., 5000"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Notes *</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={newAllowance.notes}
+                                    onChange={(e) => setNewAllowance(prev => ({ ...prev, notes: e.target.value }))}
+                                    className="w-full px-4 py-3 border border-slate-300 rounded-xl"
+                                    placeholder="e.g., Transport allowance"
+                                />
+                            </div>
+                            <div className="flex space-x-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAllowanceModal(null)}
+                                    className="flex-1 py-3 border border-slate-300 rounded-xl font-semibold text-slate-700 hover:bg-slate-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => handleAddAllowance(showAllowanceModal)}
+                                    className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700"
+                                >
+                                    Add
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

@@ -19,6 +19,43 @@ import { organizationService } from './organization.service';
 import { leaveService } from './leave.service';
 
 // =====================================================
+// AUDIT LOGGING HELPER
+// =====================================================
+
+const logScheduleAudit = async (
+  organizationId: string,
+  action: 'CREATE_SHIFT' | 'UPDATE_SHIFT' | 'DELETE_SHIFT' | 'ASSIGN_STAFF' | 'REMOVE_ASSIGNMENT',
+  details: {
+    shiftId?: string;
+    assignmentId?: string;
+    staffId?: string;
+    description: string;
+    metadata?: Record<string, any>;
+  }
+) => {
+  try {
+    await addDoc(collections.auditLogs(), {
+      eventType: 'Schedule',
+      action,
+      userId: auth.currentUser?.uid || null,
+      userEmail: auth.currentUser?.email || null,
+      organizationId,
+      targetTable: action.includes('ASSIGNMENT') ? 'shift_assignments' : 'shifts',
+      targetId: details.shiftId || details.assignmentId || null,
+      description: details.description,
+      metadata: {
+        ...details.metadata,
+        staffId: details.staffId
+      },
+      createdAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Failed to log audit:', error);
+    // Don't throw - audit logging should not break the main operation
+  }
+};
+
+// =====================================================
 // SCHEDULE SERVICE
 // =====================================================
 
@@ -143,6 +180,13 @@ export const scheduleService = {
       updatedAt: serverTimestamp()
     });
 
+    // Log audit trail
+    await logScheduleAudit(organizationId, 'CREATE_SHIFT', {
+      shiftId: docRef.id,
+      description: `Created shift for ${input.date} (${input.startTime}-${input.endTime})`,
+      metadata: { date: input.date, startTime: input.startTime, endTime: input.endTime, roleRequired: input.roleRequired }
+    });
+
     return (await this.getById(organizationId, docRef.id))!;
   },
 
@@ -157,9 +201,19 @@ export const scheduleService = {
     staffNeeded: number;
     notes: string;
   }>): Promise<Shift> {
+    // Get original for audit
+    const original = await this.getById(organizationId, shiftId);
+
     await updateDoc(docs.shift(organizationId, shiftId), {
       ...updates,
       updatedAt: serverTimestamp()
+    });
+
+    // Log audit trail
+    await logScheduleAudit(organizationId, 'UPDATE_SHIFT', {
+      shiftId,
+      description: `Updated shift for ${updates.date || original?.date}`,
+      metadata: { before: original, updates }
     });
 
     return (await this.getById(organizationId, shiftId))!;
@@ -169,7 +223,17 @@ export const scheduleService = {
    * Delete a shift
    */
   async deleteShift(organizationId: string, shiftId: string): Promise<void> {
+    // Get shift details for audit before deleting
+    const shift = await this.getById(organizationId, shiftId);
+
     await deleteDoc(docs.shift(organizationId, shiftId));
+
+    // Log audit trail
+    await logScheduleAudit(organizationId, 'DELETE_SHIFT', {
+      shiftId,
+      description: `Deleted shift for ${shift?.date} (${shift?.startTime}-${shift?.endTime})`,
+      metadata: { deletedShift: shift }
+    });
   },
 
   // ==================== SHIFT ASSIGNMENTS ====================
@@ -250,6 +314,17 @@ export const scheduleService = {
       createdAt: serverTimestamp()
     });
 
+    // Log audit trail
+    await logScheduleAudit(organizationId, 'ASSIGN_STAFF', {
+      shiftId,
+      assignmentId: docRef.id,
+      staffId: input.staffId,
+      description: input.isLocum
+        ? `Assigned locum "${input.locumName}" to shift on ${shift.date}`
+        : `Assigned staff to shift on ${shift.date}`,
+      metadata: { isLocum: input.isLocum, locumName: input.locumName, shiftDate: shift.date }
+    });
+
     const assignments = await this.getShiftAssignments(organizationId, shiftId);
     const assignment = assignments.find(a => a.id === docRef.id);
 
@@ -260,12 +335,25 @@ export const scheduleService = {
    * Remove staff from shift
    */
   async removeAssignment(organizationId: string, assignmentId: string): Promise<void> {
-    // Find the assignment first to get the document path
+    // Find the assignment first to get the document path and details for audit
     const q = query(collections.shiftAssignments(organizationId));
     const snapshot = await getDocs(q);
     const doc = snapshot.docs.find(d => d.id === assignmentId);
+
     if (doc) {
+      const assignmentData = doc.data();
       await deleteDoc(doc.ref);
+
+      // Log audit trail
+      await logScheduleAudit(organizationId, 'REMOVE_ASSIGNMENT', {
+        shiftId: assignmentData.shiftId,
+        assignmentId,
+        staffId: assignmentData.staffId,
+        description: assignmentData.isLocum
+          ? `Removed locum "${assignmentData.locumName}" from shift`
+          : 'Removed staff from shift',
+        metadata: { removedAssignment: assignmentData }
+      });
     }
   },
 
@@ -307,5 +395,25 @@ export const scheduleService = {
       const assignedCount = shift.assignments?.length || 0;
       return assignedCount < shift.staffNeeded;
     });
+  },
+
+  /**
+   * Check if staff has shifts during a date range (for leave overlap warning)
+   */
+  async hasStaffShiftsDuringDates(
+    organizationId: string,
+    staffId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<{ hasOverlap: boolean; overlappingShifts: Shift[] }> {
+    const shifts = await this.getStaffSchedule(organizationId, staffId, {
+      startDate,
+      endDate
+    });
+
+    return {
+      hasOverlap: shifts.length > 0,
+      overlappingShifts: shifts
+    };
   }
 };

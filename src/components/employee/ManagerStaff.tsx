@@ -67,12 +67,12 @@ const ManagerStaff: React.FC = () => {
                     <input
                         type="text"
                         placeholder="Search staff..."
-                        className="px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-blue-500"
+                        className="px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-teal-500"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                     <select
-                        className="px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-blue-500 bg-white"
+                        className="px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-teal-500 bg-white"
                         value={locationFilter}
                         onChange={(e) => setLocationFilter(e.target.value)}
                     >
@@ -111,7 +111,7 @@ const ManagerStaff: React.FC = () => {
                                 <tr key={person.id} className="hover:bg-slate-50 transition-colors">
                                     <td className="px-6 py-4">
                                         <div className="flex items-center space-x-3">
-                                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold border border-blue-200">
+                                            <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold border border-teal-200">
                                                 {person.fullName?.split(' ').map(n => n[0]).join('') || '?'}
                                             </div>
                                             <span className="font-bold text-slate-900">{person.fullName || 'Unknown'}</span>
