@@ -207,38 +207,14 @@ const LeaveManager: React.FC = () => {
                     <h2 className="text-2xl font-bold text-slate-900">Leave Management</h2>
                     <p className="text-slate-500 mt-1">{requests.length} requests • {pendingCount} pending approval</p>
                 </div>
-                <div className="flex space-x-3">
-                    <button
-                        onClick={() => setShowPolicyModal(true)}
-                        className="bg-slate-100 text-slate-700 px-4 py-2 rounded-xl font-semibold hover:bg-slate-200"
-                    >
-                        ⚙️ Leave Policies
-                    </button>
-                    <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-blue-700"
-                    >
-                        + Create Leave Request
-                    </button>
-                </div>
+                <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-blue-700"
+                >
+                    + Create Leave Request
+                </button>
             </div>
 
-            {/* Leave Policy Summary Bar */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6">
-                <h3 className="font-semibold text-slate-800 mb-3">📋 Leave Policy Summary (Kenya Defaults)</h3>
-                <div className="flex flex-wrap gap-3">
-                    {leaveTypes.slice(0, 6).map(lt => (
-                        <div key={lt.id} className="bg-white rounded-lg px-3 py-2 border border-slate-200 text-sm">
-                            <span className="font-medium text-slate-800">{lt.name}</span>
-                            <span className="mx-2 text-slate-400">|</span>
-                            <span className="text-slate-600">{lt.daysAllowed} days</span>
-                            <span className={`ml-2 px-1.5 py-0.5 rounded text-xs ${lt.isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                                {lt.isPaid ? 'Paid' : 'Unpaid'}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            </div>
 
             {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 flex justify-between">
@@ -263,6 +239,26 @@ const LeaveManager: React.FC = () => {
                     Leave Policies
                 </button>
             </div>
+
+            {/* Navigation Helper - Only show in requests tab */}
+            {activeTab === 'requests' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                    <div className="flex items-start space-x-3">
+                        <span className="text-xl">ℹ️</span>
+                        <div className="flex-1">
+                            <p className="text-sm text-blue-800">
+                                <strong>Need to configure leave types?</strong> View and manage organization-wide leave policies in the{' '}
+                                <button
+                                    onClick={() => setActiveTab('policies')}
+                                    className="underline font-semibold hover:text-blue-900"
+                                >
+                                    Leave Policies tab →
+                                </button>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {activeTab === 'requests' && (
                 <>

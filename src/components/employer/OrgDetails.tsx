@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { organizationService, storageService } from '../../lib/services';
 import type { Organization, Location, VerificationStatus, SubscriptionStatus } from '../../types';
+import { formatDateKE } from '../../lib/utils/dateFormat';
 
 const OrgDetails: React.FC = () => {
     const { user } = useAuth();
@@ -420,7 +421,7 @@ const OrgDetails: React.FC = () => {
                                             {location.licenseExpiry && (
                                                 <p className={`text-xs mt-1 ${isExpired ? 'text-red-600 font-bold' : 'text-slate-400'}`}>
                                                     {isExpired ? '⚠️ EXPIRED: ' : 'Expires: '}
-                                                    {new Date(location.licenseExpiry).toLocaleDateString()}
+                                                    {formatDateKE(location.licenseExpiry)}
                                                 </p>
                                             )}
 

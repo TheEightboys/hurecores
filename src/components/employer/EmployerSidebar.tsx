@@ -30,8 +30,8 @@ const EmployerSidebar: React.FC<EmployerSidebarProps> = ({ isOpen, setIsOpen, us
             title: 'Admin',
             items: [
                 { name: 'Clinic Info & Vetting', icon: '🏥', path: '/employer/organization' },
-                { name: 'Settings / Rules', icon: '⚙️', path: '/employer/settings-rules' },
                 { name: 'Billing & Settings', icon: NAVIGATION_ICONS.Billing, path: '/employer/billing' },
+                { name: 'Settings / Rules', icon: '⚙️', path: '/employer/settings-rules' },
                 { name: 'Permissions', icon: '🔐', path: '/employer/permissions' },
                 { name: 'Docs / Policies', icon: '📄', path: '/employer/documents' },
                 { name: 'Audit log', icon: '📋', path: '/employer/audit' },

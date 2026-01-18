@@ -228,8 +228,27 @@ export const payrollService = {
       await updateDoc(doc.ref, {
         isPaid: true,
         paidAt: new Date().toISOString(),
-        paidBy: auth.currentUser?.uid,
+        paidBy: auth.currentUser?.email || auth.currentUser?.uid,
         paymentReference: paymentReference || null,
+        updatedAt: serverTimestamp()
+      });
+    }
+  },
+
+  /**
+   * Unmark entry as paid (for corrections before finalization)
+   */
+  async unmarkAsPaid(organizationId: string, entryId: string): Promise<void> {
+    const q = query(collections.payrollEntries(organizationId));
+    const snapshot = await getDocs(q);
+    const doc = snapshot.docs.find(d => d.id === entryId);
+
+    if (doc) {
+      await updateDoc(doc.ref, {
+        isPaid: false,
+        paidAt: null,
+        paidBy: null,
+        paymentReference: null,
         updatedAt: serverTimestamp()
       });
     }

@@ -46,6 +46,7 @@ const PayrollView: React.FC = () => {
     });
 
     const [newAllowance, setNewAllowance] = useState({ amount: 0, notes: '' });
+    const [editingAllowanceIndex, setEditingAllowanceIndex] = useState<number | null>(null);
 
     useEffect(() => {
         loadPeriods();
@@ -219,13 +220,24 @@ const PayrollView: React.FC = () => {
     const handleMarkEntryPaid = async (entryId: string) => {
         if (!user?.organizationId) return;
 
+        // Find entry to determine current state
+        const entry = entries.find(e => e.id === entryId);
+        if (!entry) return;
+
         try {
-            await payrollService.markAsPaid(user.organizationId, entryId);
-            setSuccess('Entry marked as paid');
+            if (entry.isPaid) {
+                // Unmark as paid (toggle off)
+                await payrollService.unmarkAsPaid(user.organizationId, entryId);
+                setSuccess('Entry unmarked as paid - corrections can be made');
+            } else {
+                // Mark as paid (toggle on)
+                await payrollService.markAsPaid(user.organizationId, entryId);
+                setSuccess('Entry marked as paid');
+            }
             loadPeriodDetails(selectedPeriod!.id);
             setTimeout(() => setSuccess(''), 3000);
         } catch (err: any) {
-            setError(err.message || 'Failed to mark as paid');
+            setError(err.message || 'Failed to update paid status');
         }
     };
 
@@ -281,26 +293,73 @@ const PayrollView: React.FC = () => {
     const handleAddAllowance = async (entryId: string) => {
         if (!user?.organizationId || !selectedPeriod || selectedPeriod.isFinalized) return;
 
-        // This would need a backend function to add allowances
-        // For now, we'll update the entry locally
         const entry = entries.find(e => e.id === entryId);
         if (!entry) return;
 
-        const newAllowanceDetails = [
-            ...(entry.allowanceDetails || []),
-            { amount: newAllowance.amount * 100, notes: newAllowance.notes }
-        ];
-        const totalAllowances = newAllowanceDetails.reduce((sum, a) => sum + a.amount, 0);
+        if (editingAllowanceIndex !== null) {
+            // Edit existing allowance
+            setEntries(prev => prev.map(e => {
+                if (e.id !== entryId) return e;
+                const newDetails = [...(e.allowanceDetails || [])];
+                newDetails[editingAllowanceIndex] = {
+                    amount: newAllowance.amount * 100,
+                    notes: newAllowance.notes
+                };
+                const newTotal = newDetails.reduce((sum, a) => sum + a.amount, 0);
+                return {
+                    ...e,
+                    allowanceDetails: newDetails,
+                    allowancesTotalCents: newTotal
+                };
+            }));
+        } else {
+            // Add new allowance
+            const newAllowanceDetails = [
+                ...(entry.allowanceDetails || []),
+                { amount: newAllowance.amount * 100, notes: newAllowance.notes }
+            ];
+            const totalAllowances = newAllowanceDetails.reduce((sum, a) => sum + a.amount, 0);
 
-        // Update would go to backend here
-        setEntries(prev => prev.map(e =>
-            e.id === entryId
-                ? { ...e, allowanceDetails: newAllowanceDetails, allowancesCents: totalAllowances }
-                : e
-        ));
+            setEntries(prev => prev.map(e =>
+                e.id === entryId
+                    ? { ...e, allowanceDetails: newAllowanceDetails, allowancesTotalCents: totalAllowances }
+                    : e
+            ));
+        }
 
         setShowAllowanceModal(null);
         setNewAllowance({ amount: 0, notes: '' });
+        setEditingAllowanceIndex(null);
+    };
+
+    const handleEditAllowance = (entryId: string, allowanceIdx: number) => {
+        const entry = entries.find(e => e.id === entryId);
+        if (!entry) return;
+        const allowance = entry.allowanceDetails?.[allowanceIdx];
+        if (!allowance) return;
+
+        setNewAllowance({
+            amount: allowance.amount / 100,
+            notes: allowance.notes
+        });
+        setEditingAllowanceIndex(allowanceIdx);
+        setShowAllowanceModal(entryId);
+    };
+
+    const handleDeleteAllowance = (entryId: string, allowanceIdx: number) => {
+        if (!window.confirm('Are you sure you want to delete this allowance?')) return;
+
+        setEntries(prev => prev.map(e => {
+            if (e.id !== entryId) return e;
+            const newDetails = [...(e.allowanceDetails || [])];
+            newDetails.splice(allowanceIdx, 1);
+            const newTotal = newDetails.reduce((sum, a) => sum + a.amount, 0);
+            return {
+                ...e,
+                allowanceDetails: newDetails,
+                allowancesTotalCents: newTotal
+            };
+        }));
     };
 
     const formatCurrency = (cents: number) => {
@@ -561,26 +620,35 @@ const PayrollView: React.FC = () => {
                                                                 {((entry.payableBaseCents) / 100).toLocaleString()}
                                                             </td>
                                                             <td className="px-4 py-4 text-right text-slate-600">
-                                                                {((entry.allowancesTotalCents) / 100).toLocaleString()}
+                                                                {((entry.allowancesTotalCents || 0) / 100).toLocaleString()}
                                                             </td>
                                                             <td className="px-4 py-4 text-right font-bold text-slate-900">
-                                                                {((entry.grossPayCents) / 100).toLocaleString()}
+                                                                {(((entry.payableBaseCents || 0) + (entry.allowancesTotalCents || 0)) / 100).toLocaleString()}
                                                             </td>
                                                             <td className="px-4 py-4 text-center">
-                                                                {entry.isPaid ? (
-                                                                    <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full text-xs font-bold">
-                                                                        ✓ Paid
-                                                                    </span>
+                                                                {selectedPeriod.isFinalized ? (
+                                                                    /* Fully locked after finalization */
+                                                                    entry.isPaid ? (
+                                                                        <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full text-xs font-bold">
+                                                                            ✓ Paid (Finalized)
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="bg-slate-100 text-slate-500 px-2 py-1 rounded-full text-xs font-bold">
+                                                                            Unpaid (Finalized)
+                                                                        </span>
+                                                                    )
                                                                 ) : (
+                                                                    /* Editable checkbox before finalization */
                                                                     <label className="flex items-center justify-center cursor-pointer">
                                                                         <input
                                                                             type="checkbox"
-                                                                            checked={false}
+                                                                            checked={entry.isPaid}
                                                                             onChange={() => handleMarkEntryPaid(entry.id)}
-                                                                            disabled={selectedPeriod.isFinalized}
                                                                             className="w-5 h-5"
                                                                         />
-                                                                        <span className="ml-2 text-sm text-slate-500">Unpaid</span>
+                                                                        <span className={`ml-2 text-sm ${entry.isPaid ? 'text-emerald-600 font-medium' : 'text-slate-500'}`}>
+                                                                            {entry.isPaid ? '✓ Paid' : 'Unpaid'}
+                                                                        </span>
                                                                     </label>
                                                                 )}
                                                             </td>
@@ -668,6 +736,7 @@ const PayrollView: React.FC = () => {
                                                                                     <tr className="text-left text-slate-500">
                                                                                         <th className="py-1">Amount (KSh)</th>
                                                                                         <th className="py-1">Notes</th>
+                                                                                        <th className="py-1 text-right">Actions</th>
                                                                                     </tr>
                                                                                 </thead>
                                                                                 <tbody>
@@ -675,11 +744,27 @@ const PayrollView: React.FC = () => {
                                                                                         <tr key={idx}>
                                                                                             <td className="py-1">{(allowance.amount / 100).toLocaleString()}</td>
                                                                                             <td className="py-1 text-slate-600">{allowance.notes}</td>
+                                                                                            <td className="py-1 text-right">
+                                                                                                {!selectedPeriod.isFinalized && (
+                                                                                                    <div className="flex justify-end space-x-2">
+                                                                                                        <button
+                                                                                                            onClick={() => handleEditAllowance(entry.id, idx)}
+                                                                                                            className="text-blue-600 hover:text-blue-800 text-xs font-medium">
+                                                                                                            Edit
+                                                                                                        </button>
+                                                                                                        <button
+                                                                                                            onClick={() => handleDeleteAllowance(entry.id, idx)}
+                                                                                                            className="text-red-600 hover:text-red-800 text-xs font-medium">
+                                                                                                            Delete
+                                                                                                        </button>
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </td>
                                                                                         </tr>
                                                                                     ))}
                                                                                     {(!entry.allowanceDetails || entry.allowanceDetails.length === 0) && (
                                                                                         <tr>
-                                                                                            <td colSpan={2} className="py-2 text-slate-400 text-center">No allowances</td>
+                                                                                            <td colSpan={3} className="py-2 text-slate-400 text-center">No allowances</td>
                                                                                         </tr>
                                                                                     )}
                                                                                 </tbody>
@@ -692,16 +777,26 @@ const PayrollView: React.FC = () => {
                                                                                 </div>
                                                                                 <div className="flex justify-between">
                                                                                     <span className="text-slate-600">Total Gross:</span>
-                                                                                    <span className="font-bold">{(entry.grossPayCents / 100).toLocaleString()}</span>
+                                                                                    <span className="font-bold">{(((entry.payableBaseCents || 0) + (entry.allowancesTotalCents || 0)) / 100).toLocaleString()}</span>
                                                                                 </div>
-                                                                                <div className="flex justify-between text-slate-400">
-                                                                                    <span>Paid Date:</span>
-                                                                                    <span>{entry.paidAt || '—'}</span>
+                                                                                <div className="flex justify-between text-slate-500 pt-2 border-t mt-2">
+                                                                                    <span>Paid Status:</span>
+                                                                                    <span className={entry.isPaid ? 'text-emerald-600 font-medium' : 'text-slate-400'}>
+                                                                                        {entry.isPaid ? '✓ Paid' : 'Not yet paid'}
+                                                                                    </span>
                                                                                 </div>
-                                                                                <div className="flex justify-between text-slate-400">
-                                                                                    <span>Marked Paid By:</span>
-                                                                                    <span>{entry.paidBy || '—'}</span>
-                                                                                </div>
+                                                                                {entry.isPaid && (
+                                                                                    <>
+                                                                                        <div className="flex justify-between text-slate-500">
+                                                                                            <span>📅 Paid On:</span>
+                                                                                            <span>{entry.paidAt ? new Date(entry.paidAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' at ' + new Date(entry.paidAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
+                                                                                        </div>
+                                                                                        <div className="flex justify-between text-slate-500">
+                                                                                            <span>👤 Marked By:</span>
+                                                                                            <span className="font-medium text-slate-700">{entry.paidBy || 'Unknown'}</span>
+                                                                                        </div>
+                                                                                    </>
+                                                                                )}
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -901,8 +996,10 @@ const PayrollView: React.FC = () => {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-2xl w-full max-w-sm p-6 m-4">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold text-slate-900">Add Allowance</h2>
-                            <button onClick={() => setShowAllowanceModal(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+                            <h2 className="text-xl font-bold text-slate-900">
+                                {editingAllowanceIndex !== null ? 'Edit Allowance' : 'Add Allowance'}
+                            </h2>
+                            <button onClick={() => { setShowAllowanceModal(null); setEditingAllowanceIndex(null); setNewAllowance({ amount: 0, notes: '' }); }} className="text-slate-400 hover:text-slate-600">✕</button>
                         </div>
 
                         <div className="space-y-4">

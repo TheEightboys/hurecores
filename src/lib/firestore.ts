@@ -53,6 +53,8 @@ export const collections = {
     settings: (orgId: string) => collection(db, 'organizations', orgId, 'settings'),
     policyDocuments: (orgId: string) => collection(db, 'organizations', orgId, 'policyDocuments'),
     documentAcknowledgements: (orgId: string) => collection(db, 'organizations', orgId, 'documentAcknowledgements'),
+    // Org-level audit logs (use this for org-scoped audit trail)
+    orgAuditLogs: (orgId: string) => collection(db, 'organizations', orgId, 'auditLogs'),
 };
 
 // Document references

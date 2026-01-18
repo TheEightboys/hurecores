@@ -36,12 +36,17 @@ const KenyaPhoneInput: React.FC<KenyaPhoneInputProps> = ({
     // Initialize display value from normalized value
     useEffect(() => {
         if (value && value.startsWith('+254')) {
-            setDisplayValue(value.substring(4)); // Remove +254 for display
+            const local = value.substring(4); // Remove +254 for display
+            // Format with spaces: 712 345 678
+            const formatted = local.substring(0, 3) + ' ' + local.substring(3, 6) + ' ' + local.substring(6);
+            setDisplayValue(formatted);
         } else if (value) {
             // Try to normalize and extract local part
             const result = normalizeKenyanPhone(value);
             if (result.isValid && result.normalized) {
-                setDisplayValue(result.normalized.substring(4));
+                const local = result.normalized.substring(4);
+                const formatted = local.substring(0, 3) + ' ' + local.substring(3, 6) + ' ' + local.substring(6);
+                setDisplayValue(formatted);
             } else {
                 setDisplayValue(value);
             }
@@ -59,7 +64,16 @@ const KenyaPhoneInput: React.FC<KenyaPhoneInputProps> = ({
             input = input.substring(0, 9);
         }
 
-        setDisplayValue(input);
+        // Format with spaces for display: 712 345 678
+        let formatted = input;
+        if (input.length > 3) {
+            formatted = input.substring(0, 3) + ' ' + input.substring(3);
+        }
+        if (input.length > 6) {
+            formatted = input.substring(0, 3) + ' ' + input.substring(3, 6) + ' ' + input.substring(6);
+        }
+
+        setDisplayValue(formatted);
         setInternalError('');
 
         // Real-time validation (partial)
@@ -86,20 +100,26 @@ const KenyaPhoneInput: React.FC<KenyaPhoneInputProps> = ({
             return;
         }
 
-        if (!displayValue && required) {
+        // Remove spaces from display value for validation
+        const cleanValue = displayValue.replace(/\s/g, '');
+
+        if (!cleanValue && required) {
             setInternalError(PHONE_VALIDATION_MESSAGES.required);
             onChange('', false);
             return;
         }
 
         // Normalize on blur
-        const result = normalizeKenyanPhone(displayValue);
+        const result = normalizeKenyanPhone(cleanValue);
         if (!result.isValid) {
             setInternalError(result.error || PHONE_VALIDATION_MESSAGES.invalid);
             onChange('', false);
         } else {
             setInternalError('');
-            setDisplayValue(result.normalized!.substring(4));
+            // Format with spaces: 712 345 678
+            const local = result.normalized!.substring(4);
+            const formatted = local.substring(0, 3) + ' ' + local.substring(3, 6) + ' ' + local.substring(6);
+            setDisplayValue(formatted);
             onChange(result.normalized!, true);
         }
     };

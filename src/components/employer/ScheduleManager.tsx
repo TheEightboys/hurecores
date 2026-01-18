@@ -3,6 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 import { scheduleService, staffService, organizationService, leaveService } from '../../lib/services';
 import type { Shift, ShiftAssignment, Profile, Location } from '../../types';
 import { JOB_TITLES } from '../../types';
+import KenyaPhoneInput from '../common/KenyaPhoneInput';
+import { formatDateKE } from '../../lib/utils/dateFormat';
 
 interface LocumForm {
     name: string;
@@ -69,6 +71,12 @@ const ScheduleManager: React.FC = () => {
 
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+
+    // View shift confirmation dialog state
+    const [showViewShiftDialog, setShowViewShiftDialog] = useState(false);
+    const [createdShiftDate, setCreatedShiftDate] = useState<string>('');
+    const [createdShiftCount, setCreatedShiftCount] = useState(0);
+    const [phoneValid, setPhoneValid] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -157,6 +165,9 @@ const ScheduleManager: React.FC = () => {
 
             setShowCreateModal(false);
 
+            // Store the created shift info for the confirmation dialog
+            const shiftDate = newShift.date;
+
             // Reset form
             setNewShift({
                 locationId: '',
@@ -171,16 +182,32 @@ const ScheduleManager: React.FC = () => {
             setRepeatDays([]);
             setRepeatEndDate('');
 
-            // Auto-navigate to the shift date
-            setSelectedDate(newShift.date);
-
-            setSuccessMessage(`Created ${createdCount} shift${createdCount > 1 ? 's' : ''} successfully!`);
-            setTimeout(() => setSuccessMessage(''), 3000);
-
-            loadData();
+            // Show confirmation dialog to ask if user wants to view the created shift(s)
+            setCreatedShiftDate(shiftDate);
+            setCreatedShiftCount(createdCount);
+            setShowViewShiftDialog(true);
+            // Note: loadData() is called after dialog choice in handleViewCreatedShift/handleSkipViewShift
         } catch (err: any) {
             setError(err.message || 'Failed to create shift');
         }
+    };
+
+    // Handle navigation to created shift's week
+    const handleViewCreatedShift = () => {
+        setSelectedDate(createdShiftDate);
+        setShowViewShiftDialog(false);
+        setSuccessMessage(`Navigated to shift on ${formatDateKE(createdShiftDate)}`);
+        setTimeout(() => setSuccessMessage(''), 3000);
+        // Reload data to show the newly created shift
+        loadData();
+    };
+
+    const handleSkipViewShift = () => {
+        setShowViewShiftDialog(false);
+        setSuccessMessage(`Created ${createdShiftCount} shift${createdShiftCount > 1 ? 's' : ''} successfully!`);
+        setTimeout(() => setSuccessMessage(''), 3000);
+        // Reload data to show the newly created shift (if in current week)
+        loadData();
     };
 
     const openEditModal = (shift: Shift) => {
@@ -889,13 +916,14 @@ const ScheduleManager: React.FC = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">Phone</label>
-                                <input
-                                    type="tel"
+                                <KenyaPhoneInput
                                     value={locumForm.phone}
-                                    onChange={(e) => setLocumForm(prev => ({ ...prev, phone: e.target.value }))}
-                                    className="w-full px-4 py-3 border border-slate-300 rounded-xl"
-                                    placeholder="+254..."
+                                    onChange={(normalized, isValid) => {
+                                        setLocumForm(prev => ({ ...prev, phone: normalized }));
+                                        setPhoneValid(isValid);
+                                    }}
+                                    label="Phone"
+                                    required={false}
                                 />
                             </div>
 
@@ -940,6 +968,41 @@ const ScheduleManager: React.FC = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* View Created Shift Confirmation Dialog */}
+            {showViewShiftDialog && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl w-full max-w-md p-6 m-4 text-center">
+                        <div className="text-4xl mb-4">✅</div>
+                        <h2 className="text-xl font-bold text-slate-900 mb-2">
+                            Shift{createdShiftCount > 1 ? 's' : ''} Created Successfully!
+                        </h2>
+                        <p className="text-slate-600 mb-6">
+                            {createdShiftCount > 1
+                                ? `${createdShiftCount} shifts have been created starting from ${formatDateKE(createdShiftDate)}.`
+                                : `Your shift on ${formatDateKE(createdShiftDate)} has been created.`
+                            }
+                        </p>
+                        <p className="text-slate-700 font-medium mb-6">
+                            Would you like to view the shift{createdShiftCount > 1 ? 's' : ''} you created?
+                        </p>
+                        <div className="flex space-x-3">
+                            <button
+                                onClick={handleSkipViewShift}
+                                className="flex-1 py-3 border border-slate-300 rounded-xl font-semibold text-slate-700 hover:bg-slate-50"
+                            >
+                                No, Stay Here
+                            </button>
+                            <button
+                                onClick={handleViewCreatedShift}
+                                className="flex-1 py-3 bg-[#1a2e35] text-[#4fd1c5] rounded-xl font-semibold hover:bg-[#152428]"
+                            >
+                                Yes, View Shift{createdShiftCount > 1 ? 's' : ''}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

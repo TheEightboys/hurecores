@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { attendanceService, organizationService, scheduleService } from '../../lib/services';
 import type { AttendanceRecord, AttendanceStatus, Location, Shift } from '../../types';
 import { JOB_TITLES } from '../../types';
+import { formatDateKE } from '../../lib/utils/dateFormat';
 
 // Roles for locum selection
 const LOCUM_ROLES = JOB_TITLES.filter(role =>
@@ -351,6 +352,7 @@ const AttendanceView: React.FC = () => {
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Hours</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Status</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Type</th>
+                                <th className="text-center px-6 py-4 text-sm font-semibold text-slate-600">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -360,7 +362,7 @@ const AttendanceView: React.FC = () => {
                                         <div className="font-medium text-slate-900">{record.staff?.fullName || 'Unknown'}</div>
                                         <div className="text-sm text-slate-500">{record.staff?.jobTitle || ''}</div>
                                     </td>
-                                    <td className="px-6 py-4 text-slate-600">{record.date}</td>
+                                    <td className="px-6 py-4 text-slate-600">{formatDateKE(record.date)}</td>
                                     <td className="px-6 py-4 text-slate-600">{formatTime(record.clockIn)}</td>
                                     <td className="px-6 py-4 text-slate-600">{formatTime(record.clockOut)}</td>
                                     <td className="px-6 py-4 text-slate-600">{record.totalHours?.toFixed(1) || '0'}</td>
@@ -371,6 +373,26 @@ const AttendanceView: React.FC = () => {
                                         ) : (
                                             <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">System</span>
                                         )}
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <div className="flex justify-center space-x-2">
+                                            <button
+                                                onClick={() => alert('Edit functionality coming soon!')}
+                                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    if (window.confirm(`Delete attendance record for ${record.staff?.fullName} on ${formatDateKE(record.date)}?`)) {
+                                                        alert('Delete functionality coming soon!');
+                                                    }
+                                                }}
+                                                className="text-red-600 hover:text-red-800 text-sm font-medium"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -422,7 +444,7 @@ const AttendanceView: React.FC = () => {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-slate-600">{shift.date}</td>
+                                        <td className="px-6 py-4 text-slate-600">{formatDateKE(shift.date)}</td>
                                         <td className="px-6 py-4 text-slate-600">{shift.startTime} - {shift.endTime}</td>
                                         <td className="px-6 py-4 text-slate-600">{shift.location?.name || 'Unknown'}</td>
                                         <td className="px-6 py-4 text-slate-600">{shift.roleRequired || '-'}</td>

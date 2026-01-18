@@ -11,3 +11,4 @@ export { storageService } from './storage.service';
 export { locationService } from './location.service';
 export { billingService } from './billing.service';
 export { settingsService, policyDocumentsService } from './settings.service';
+export { auditService } from './audit.service';
