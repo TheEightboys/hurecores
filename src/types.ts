@@ -12,6 +12,17 @@ export type SubscriptionPlan = 'Essential' | 'Professional' | 'Enterprise';
 
 export type SubscriptionStatus = 'Active' | 'Suspended' | 'Cancelled' | 'Trial';
 
+// Billing-specific types (per client requirements)
+export type BillingSubscriptionState = 'TRIAL' | 'ACTIVE' | 'SUSPENDED';
+
+export type PaymentMode = 'AUTO_PAY' | 'PAY_AS_YOU_GO';
+
+export type PaymentProvider = 'MPESA' | 'FLUTTERWAVE';
+
+export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+
+export type BillingEventType = 'TRIAL_START' | 'PAYMENT_RECEIVED' | 'SUSPENSION' | 'REACTIVATION' | 'PLAN_CHANGE';
+
 export type VerificationStatus = 'Verified' | 'Pending' | 'Unverified' | 'Rejected';
 
 export type AccountStatus = 'Active' | 'Under Review' | 'Suspended';
@@ -28,7 +39,12 @@ export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
 
 export type VerificationType = 'ORG' | 'FACILITY';
 
-export type AuditEventType = 'Security' | 'System' | 'Payment' | 'Verification' | 'Staff' | 'Schedule';
+// Approval lifecycle status (for Organizations and Facilities)
+// Pending Review → Approval action → Approved (Not Live) → Enable action → Active (Live)
+// Can be Rejected or Suspended at various points
+export type ApprovalStatus = 'Pending Review' | 'Approved' | 'Active' | 'Rejected' | 'Suspended';
+
+export type AuditEventType = 'Security' | 'System' | 'Payment' | 'Verification' | 'Staff' | 'Schedule' | 'Approval';
 
 // Healthcare-specific job titles for classification and reporting
 // NOTE: Job titles do NOT affect system access or consume admin seats
@@ -109,13 +125,25 @@ export interface Subscription {
   organizationId: string;
   plan: SubscriptionPlan;
   status: SubscriptionStatus;
+  // New billing state management
+  billingState: BillingSubscriptionState;
+  paymentMode: PaymentMode;
   amountCents: number;
   currency: string;
   billingCycle: string;
+  billingCycleDays: number; // 31 days per client spec
   currentPeriodStart?: string;
   currentPeriodEnd?: string;
   nextBillingDate?: string;
+  trialStartedAt?: string;
   trialEndsAt?: string;
+  trialDays: number; // 10 days per client spec
+  autoPayEnabled: boolean;
+  lastPaymentDate?: string;
+  lastPaymentProvider?: PaymentProvider;
+  suspendedAt?: string;
+  suspensionReason?: string;
+  reactivatedAt?: string;
   cancelledAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -452,6 +480,43 @@ export interface AuditLog {
   metadata?: Record<string, unknown>;
   ipAddress?: string;
   userAgent?: string;
+  createdAt: string;
+}
+
+// =====================================================
+// BILLING & PAYMENTS
+// =====================================================
+
+export interface PaymentRecord {
+  id: string;
+  organizationId: string;
+  subscriptionId: string;
+  plan: SubscriptionPlan;
+  amountCents: number;
+  currency: string;
+  provider: PaymentProvider;
+  providerTransactionId?: string;
+  providerReference?: string;
+  phoneNumber?: string; // For M-Pesa
+  email?: string; // For Flutterwave
+  status: PaymentStatus;
+  failureReason?: string;
+  paidAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BillingLog {
+  id: string;
+  organizationId: string;
+  eventType: BillingEventType;
+  plan?: SubscriptionPlan;
+  amountCents?: number;
+  provider?: PaymentProvider;
+  previousState?: BillingSubscriptionState;
+  newState?: BillingSubscriptionState;
+  description: string;
+  metadata?: Record<string, unknown>;
   createdAt: string;
 }
 

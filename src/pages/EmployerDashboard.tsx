@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import EmployerSidebar from '../components/employer/EmployerSidebar';
 import EmployerTopBar from '../components/employer/EmployerTopBar';
+import SubscriptionGuard from '../components/common/SubscriptionGuard';
 
 import DashboardHome from '../components/employer/DashboardHome';
 import StaffManagement from '../components/employer/StaffManagement';
@@ -90,18 +91,69 @@ const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ user }) => {
 
         <main className="flex-1 overflow-y-auto">
           <Routes>
-            <Route path="/" element={<DashboardHome />} />
-            <Route path="/staff" element={<StaffManagement />} />
-            <Route path="/schedule" element={<ScheduleManager />} />
-            <Route path="/attendance" element={<AttendanceView />} />
-            <Route path="/payroll" element={<PayrollView />} />
-            <Route path="/leave" element={<LeaveManager />} />
-            <Route path="/billing" element={<BillingView organization={organization} />} />
-            <Route path="/organization" element={<OrgDetails />} />
-            <Route path="/verification" element={<OrgDetails />} />
-            <Route path="/locations" element={<LocationsManager />} />
-            <Route path="/permissions" element={<PermissionsManager />} />
-            <Route path="/settings" element={<SettingsView />} />
+            {/* Billing route - always accessible (even when suspended) */}
+            <Route path="/billing" element={
+              <SubscriptionGuard allowBillingAccess={true}>
+                <BillingView organization={organization} />
+              </SubscriptionGuard>
+            } />
+
+            {/* Protected routes - blocked when suspended */}
+            <Route path="/" element={
+              <SubscriptionGuard>
+                <DashboardHome />
+              </SubscriptionGuard>
+            } />
+            <Route path="/staff" element={
+              <SubscriptionGuard>
+                <StaffManagement />
+              </SubscriptionGuard>
+            } />
+            <Route path="/schedule" element={
+              <SubscriptionGuard>
+                <ScheduleManager />
+              </SubscriptionGuard>
+            } />
+            <Route path="/attendance" element={
+              <SubscriptionGuard>
+                <AttendanceView />
+              </SubscriptionGuard>
+            } />
+            <Route path="/payroll" element={
+              <SubscriptionGuard>
+                <PayrollView />
+              </SubscriptionGuard>
+            } />
+            <Route path="/leave" element={
+              <SubscriptionGuard>
+                <LeaveManager />
+              </SubscriptionGuard>
+            } />
+            <Route path="/organization" element={
+              <SubscriptionGuard>
+                <OrgDetails />
+              </SubscriptionGuard>
+            } />
+            <Route path="/verification" element={
+              <SubscriptionGuard>
+                <OrgDetails />
+              </SubscriptionGuard>
+            } />
+            <Route path="/locations" element={
+              <SubscriptionGuard>
+                <LocationsManager />
+              </SubscriptionGuard>
+            } />
+            <Route path="/permissions" element={
+              <SubscriptionGuard>
+                <PermissionsManager />
+              </SubscriptionGuard>
+            } />
+            <Route path="/settings" element={
+              <SubscriptionGuard>
+                <SettingsView />
+              </SubscriptionGuard>
+            } />
           </Routes>
         </main>
       </div>
@@ -110,3 +162,4 @@ const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ user }) => {
 };
 
 export default EmployerDashboard;
+
