@@ -49,6 +49,10 @@ export const collections = {
     customRoles: (orgId: string) => collection(db, 'organizations', orgId, 'customRoles'),
     notifications: (orgId: string) => collection(db, 'organizations', orgId, 'notifications'),
     subscriptions: (orgId: string) => collection(db, 'organizations', orgId, 'subscriptions'),
+    // Settings and Policy Documents
+    settings: (orgId: string) => collection(db, 'organizations', orgId, 'settings'),
+    policyDocuments: (orgId: string) => collection(db, 'organizations', orgId, 'policyDocuments'),
+    documentAcknowledgements: (orgId: string) => collection(db, 'organizations', orgId, 'documentAcknowledgements'),
 };
 
 // Document references
@@ -66,6 +70,10 @@ export const docs = {
     notification: (orgId: string, notifId: string) => doc(db, 'organizations', orgId, 'notifications', notifId),
     verificationRequest: (requestId: string) => doc(db, 'verificationRequests', requestId),
     auditLog: (logId: string) => doc(db, 'auditLogs', logId),
+    // Settings and Policy Documents
+    settings: (orgId: string, settingsId: string) => doc(db, 'organizations', orgId, 'settings', settingsId),
+    policyDocument: (orgId: string, docId: string) => doc(db, 'organizations', orgId, 'policyDocuments', docId),
+    documentAcknowledgement: (orgId: string, ackId: string) => doc(db, 'organizations', orgId, 'documentAcknowledgements', ackId),
 };
 
 // =====================================================

@@ -15,6 +15,8 @@ import OrgDetails from '../components/employer/OrgDetails';
 import LocationsManager from '../components/employer/LocationsManager';
 import PermissionsManager from '../components/employer/PermissionsManager';
 import SettingsView from '../components/employer/SettingsView';
+import SettingsRulesView from '../components/employer/SettingsRulesView';
+import DocumentsPoliciesManager from '../components/employer/DocumentsPoliciesManager';
 
 import { organizationService } from '../lib/services/organization.service';
 import type { Organization, Location } from '../types';
@@ -152,6 +154,16 @@ const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ user }) => {
             <Route path="/settings" element={
               <SubscriptionGuard>
                 <SettingsView />
+              </SubscriptionGuard>
+            } />
+            <Route path="/settings-rules" element={
+              <SubscriptionGuard>
+                <SettingsRulesView />
+              </SubscriptionGuard>
+            } />
+            <Route path="/documents" element={
+              <SubscriptionGuard>
+                <DocumentsPoliciesManager />
               </SubscriptionGuard>
             } />
           </Routes>

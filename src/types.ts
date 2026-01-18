@@ -361,6 +361,16 @@ export interface AttendanceRecord {
   externalLocumRole?: string;
   editedBy?: string;
   editReason?: string;
+  // Lunch tracking
+  lunchStart?: string;
+  lunchEnd?: string;
+  lunchDurationMinutes?: number;
+  isOnLunch?: boolean;
+  // Break tracking
+  breaks?: Array<{ startTime: string; endTime?: string; durationMinutes?: number }>;
+  breakCount?: number;
+  isOnBreak?: boolean;
+  currentBreakStart?: string;
   createdAt: string;
   updatedAt: string;
   // Joined
@@ -481,6 +491,101 @@ export interface AuditLog {
   ipAddress?: string;
   userAgent?: string;
   createdAt: string;
+}
+
+// =====================================================
+// ORGANIZATION SETTINGS & RULES
+// =====================================================
+
+export interface AttendanceRules {
+  enabled: boolean;
+  mode: 'daily' | 'shift-based';
+  allowClockInWithoutShift: boolean;
+  earlyClockInMinutes: number;
+  lateClockInMinutes: number;
+  requireLocationAtClockIn: boolean;
+}
+
+export interface LunchRules {
+  enabled: boolean;
+  oncePerDay: boolean;
+  minDurationMinutes: number;
+  maxDurationMinutes?: number;
+  isPaid: boolean;
+  requiredAfterHours?: number;
+  reminderAfterHours?: number;
+}
+
+export interface BreakRules {
+  enabled: boolean;
+  maxBreaksPerDay: number;
+  maxDurationMinutes: number;
+  isPaid: boolean;
+}
+
+export interface OrganizationSettings {
+  id: string;
+  organizationId: string;
+  attendance: AttendanceRules;
+  lunch: LunchRules;
+  breaks: BreakRules;
+  updatedAt: string;
+  updatedBy?: string;
+}
+
+export const DEFAULT_ATTENDANCE_RULES: AttendanceRules = {
+  enabled: true,
+  mode: 'daily',
+  allowClockInWithoutShift: true,
+  earlyClockInMinutes: 10,
+  lateClockInMinutes: 15,
+  requireLocationAtClockIn: false
+};
+
+export const DEFAULT_LUNCH_RULES: LunchRules = {
+  enabled: true,
+  oncePerDay: true,
+  minDurationMinutes: 30,
+  maxDurationMinutes: undefined,
+  isPaid: false,
+  requiredAfterHours: undefined,
+  reminderAfterHours: 4
+};
+
+export const DEFAULT_BREAK_RULES: BreakRules = {
+  enabled: true,
+  maxBreaksPerDay: 2,
+  maxDurationMinutes: 15,
+  isPaid: true
+};
+
+// =====================================================
+// DOCUMENTS & POLICIES
+// =====================================================
+
+export interface PolicyDocument {
+  id: string;
+  organizationId: string;
+  name: string;
+  description?: string;
+  fileUrl: string;
+  fileSizeBytes?: number;
+  mimeType?: string;
+  assignedTo: 'all' | 'roles' | 'individuals';
+  assignedRoles?: string[];
+  assignedStaffIds?: string[];
+  requiresAcknowledgement: boolean;
+  uploadedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentAcknowledgement {
+  id: string;
+  documentId: string;
+  staffId: string;
+  staffName?: string;
+  acknowledgedAt: string;
 }
 
 // =====================================================

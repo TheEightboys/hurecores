@@ -3,10 +3,12 @@ import { Routes, Route } from 'react-router-dom';
 import EmployeeSidebar from '../components/employee/EmployeeSidebar';
 import EmployeeTopBar from '../components/employee/EmployeeTopBar';
 
+import TodayMyWork from '../components/employee/TodayMyWork';
 import MySchedule from '../components/employee/MySchedule';
 import MyAttendance from '../components/employee/MyAttendance';
 import MyLeave from '../components/employee/MyLeave';
 import MyProfile from '../components/employee/MyProfile';
+import MyDocuments from '../components/employee/MyDocuments';
 
 import ManagerDashboard from '../components/employee/ManagerDashboard';
 import ManagerSchedule from '../components/employee/ManagerSchedule';
@@ -52,9 +54,11 @@ const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({ user }) => {
             <main className="flex-1 overflow-y-auto">
                <Routes>
                   {/* Personal Routes - Always available */}
-                  <Route path="/" element={<MySchedule />} />
+                  <Route path="/" element={<TodayMyWork />} />
+                  <Route path="/schedule" element={<MySchedule />} />
                   <Route path="/attendance" element={<MyAttendance />} />
                   <Route path="/leave" element={<MyLeave />} />
+                  <Route path="/documents" element={<MyDocuments />} />
                   <Route path="/profile" element={<MyProfile />} />
 
                   {/* Manager Routes - Permission-based */}

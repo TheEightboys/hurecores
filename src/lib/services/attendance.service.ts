@@ -318,5 +318,113 @@ export const attendanceService = {
       staffId: userId,
       ...filters
     });
+  },
+
+  // =====================================================
+  // LUNCH TRACKING
+  // =====================================================
+
+  /**
+   * Start lunch
+   */
+  async startLunch(organizationId: string, recordId: string): Promise<AttendanceRecord> {
+    const record = await this.getById(organizationId, recordId);
+    if (!record) throw new Error('Attendance record not found');
+    if (!record.clockIn) throw new Error('Must clock in first');
+    if (record.clockOut) throw new Error('Cannot take lunch after clocking out');
+    if (record.isOnLunch) throw new Error('Already on lunch');
+    if (record.lunchEnd) throw new Error('Lunch already taken today');
+    if (record.isOnBreak) throw new Error('Cannot start lunch while on break');
+
+    const now = new Date().toISOString();
+
+    await updateDoc(docs.attendance(organizationId, recordId), {
+      lunchStart: now,
+      isOnLunch: true,
+      updatedAt: serverTimestamp()
+    });
+
+    return (await this.getById(organizationId, recordId))!;
+  },
+
+  /**
+   * End lunch
+   */
+  async endLunch(organizationId: string, recordId: string): Promise<AttendanceRecord> {
+    const record = await this.getById(organizationId, recordId);
+    if (!record) throw new Error('Attendance record not found');
+    if (!record.isOnLunch) throw new Error('Not currently on lunch');
+    if (!record.lunchStart) throw new Error('No lunch start time recorded');
+
+    const now = new Date();
+    const lunchStart = new Date(record.lunchStart);
+    const durationMinutes = Math.round((now.getTime() - lunchStart.getTime()) / 60000);
+
+    await updateDoc(docs.attendance(organizationId, recordId), {
+      lunchEnd: now.toISOString(),
+      lunchDurationMinutes: durationMinutes,
+      isOnLunch: false,
+      updatedAt: serverTimestamp()
+    });
+
+    return (await this.getById(organizationId, recordId))!;
+  },
+
+  // =====================================================
+  // BREAK TRACKING
+  // =====================================================
+
+  /**
+   * Start break
+   */
+  async startBreak(organizationId: string, recordId: string): Promise<AttendanceRecord> {
+    const record = await this.getById(organizationId, recordId);
+    if (!record) throw new Error('Attendance record not found');
+    if (!record.clockIn) throw new Error('Must clock in first');
+    if (record.clockOut) throw new Error('Cannot take break after clocking out');
+    if (record.isOnBreak) throw new Error('Already on break');
+    if (record.isOnLunch) throw new Error('Cannot start break while on lunch');
+
+    const now = new Date().toISOString();
+
+    await updateDoc(docs.attendance(organizationId, recordId), {
+      currentBreakStart: now,
+      isOnBreak: true,
+      updatedAt: serverTimestamp()
+    });
+
+    return (await this.getById(organizationId, recordId))!;
+  },
+
+  /**
+   * End break
+   */
+  async endBreak(organizationId: string, recordId: string): Promise<AttendanceRecord> {
+    const record = await this.getById(organizationId, recordId);
+    if (!record) throw new Error('Attendance record not found');
+    if (!record.isOnBreak) throw new Error('Not currently on break');
+    if (!record.currentBreakStart) throw new Error('No break start time recorded');
+
+    const now = new Date();
+    const breakStart = new Date(record.currentBreakStart);
+    const durationMinutes = Math.round((now.getTime() - breakStart.getTime()) / 60000);
+
+    // Add to breaks array
+    const breaks = record.breaks || [];
+    breaks.push({
+      startTime: record.currentBreakStart,
+      endTime: now.toISOString(),
+      durationMinutes
+    });
+
+    await updateDoc(docs.attendance(organizationId, recordId), {
+      breaks,
+      breakCount: breaks.length,
+      currentBreakStart: null,
+      isOnBreak: false,
+      updatedAt: serverTimestamp()
+    });
+
+    return (await this.getById(organizationId, recordId))!;
   }
 };

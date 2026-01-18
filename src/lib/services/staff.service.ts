@@ -17,6 +17,7 @@ import {
 import { auth } from '../firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { emailService } from './email.service';
+import { leaveService } from './leave.service';
 import type {
   Profile,
   CreateStaffInput,
@@ -272,6 +273,14 @@ export const staffService = {
         { inviteId }
       );
 
+      // Initialize leave balances for the new staff member
+      try {
+        await leaveService.initializeStaffBalances(invitation.organizationId, userId);
+      } catch (leaveError) {
+        console.error('Failed to initialize staff leave balances:', leaveError);
+        // Don't fail the acceptance if leave initialization fails
+      }
+
       // Notify organization admins about new staff member
       try {
         // Get all admins and owner for this organization
@@ -422,8 +431,13 @@ export const staffService = {
         }
       }
 
+      // Filter out undefined values to avoid Firestore errors
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([_, value]) => value !== undefined)
+      );
+
       await updateDoc(docs.user(userId), {
-        ...updates,
+        ...cleanUpdates,
         updatedAt: serverTimestamp()
       });
 

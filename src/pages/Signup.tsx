@@ -4,6 +4,7 @@ import { PLANS } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { docs, setDoc, serverTimestamp, collections, addDoc } from '../lib/firestore';
 import { emailService } from '../lib/services/email.service';
+import { leaveService } from '../lib/services/leave.service';
 import { normalizeKenyanPhone, isValidKenyanPhone } from '../lib/utils/phoneValidation';
 import { SystemRole, SubscriptionPlan, PLAN_LIMITS } from '../types';
 
@@ -273,6 +274,16 @@ const Signup: React.FC = () => {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
+
+      // Step 6: Create default leave types for the organization
+      try {
+        await leaveService.createDefaultLeaveTypes(orgId);
+        // Also initialize leave balances for the owner
+        await leaveService.initializeStaffBalances(orgId, userId);
+      } catch (leaveError) {
+        console.error('Failed to setup default leave types:', leaveError);
+        // Non-blocking - continue with signup
+      }
 
       // Step 6: Send welcome email
       try {

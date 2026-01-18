@@ -41,6 +41,14 @@ service cloud.firestore {
              hasProfile() && 
              getUserData().isSuperAdmin == true;
     }
+    
+    // Relaxed org membership check - doesn't require Active status
+    // Used for attendance clock-in where new staff need to prove membership
+    function isOrgStaff(orgId) {
+      return isAuthenticated() && 
+             hasProfile() && 
+             getUserData().organizationId == orgId;
+    }
 
     // ========================================================
     // Top-Level Collections
@@ -72,7 +80,6 @@ service cloud.firestore {
       allow read: if true;
       
       // Org admins can create invitations
-      // Relaxed check to fix "Missing permissions" - relies on client-side validation for now + basic auth
       allow create: if isAuthenticated() && 
                     hasProfile();
       
@@ -88,8 +95,8 @@ service cloud.firestore {
       // Create: Allow any authenticated user (Signup flow)
       allow create: if isAuthenticated();
       
-      // Read: Org members or SuperAdmin
-      allow read: if isOrgMember(orgId) || isSuperAdmin();
+      // Read: Org members or SuperAdmin (use relaxed isOrgStaff for new staff)
+      allow read: if isOrgStaff(orgId) || isSuperAdmin();
       
       // Update: Org admins or SuperAdmin
       allow update: if isOrgAdmin(orgId) || isSuperAdmin();
@@ -100,37 +107,37 @@ service cloud.firestore {
       
       // Staff
       match /staff/{staffId} {
-        allow read: if isOrgMember(orgId) || isSuperAdmin();
+        allow read: if isOrgStaff(orgId) || isSuperAdmin();
         allow write: if isOrgAdmin(orgId) || isSuperAdmin();
       }
       
       // Locations
       match /locations/{locationId} {
-        allow read: if isOrgMember(orgId) || isSuperAdmin();
+        allow read: if isOrgStaff(orgId) || isSuperAdmin();
         allow write: if isOrgAdmin(orgId) || isSuperAdmin();
       }
       
       // Shifts & Assignments
       match /shifts/{shiftId} {
-        allow read: if isOrgMember(orgId) || isSuperAdmin();
+        allow read: if isOrgStaff(orgId) || isSuperAdmin();
         allow write: if isOrgAdmin(orgId) || isSuperAdmin();
       }
       match /shiftAssignments/{assignId} {
-        allow read: if isOrgMember(orgId) || isSuperAdmin();
+        allow read: if isOrgStaff(orgId) || isSuperAdmin();
         // Admins can write, Staff can update status (accept/decline)
-        allow write: if isOrgAdmin(orgId) || isSuperAdmin() || (isOrgMember(orgId) && request.resource.data.staffId == request.auth.uid);
+        allow write: if isOrgAdmin(orgId) || isSuperAdmin() || (isOrgStaff(orgId) && request.resource.data.staffId == request.auth.uid);
       }
       
       // Attendance
       match /attendance/{recordId} {
         // Staff can read their own, Admins/SuperAdmins can read all
-        allow read: if isOrgAdmin(orgId) || isSuperAdmin() || (isOrgMember(orgId) && resource.data.staffId == request.auth.uid);
+        allow read: if isOrgAdmin(orgId) || isSuperAdmin() || (isOrgStaff(orgId) && resource.data.staffId == request.auth.uid);
         
-        // Staff can clock in/out (create)
-        allow create: if isOrgMember(orgId) && request.resource.data.staffId == request.auth.uid;
+        // Staff can clock in/out (create) - use relaxed isOrgStaff check
+        allow create: if isOrgStaff(orgId) && request.resource.data.staffId == request.auth.uid;
         
-        // Staff can update their own (for clock out)
-        allow update: if isOrgMember(orgId) && resource.data.staffId == request.auth.uid;
+        // Staff can update their own (for clock out, lunch, break)
+        allow update: if isOrgStaff(orgId) && resource.data.staffId == request.auth.uid;
         
         // Admins/SuperAdmins can manage all
         allow write: if isOrgAdmin(orgId) || isSuperAdmin();
@@ -138,20 +145,27 @@ service cloud.firestore {
       
       // Leave Requests
       match /leaveRequests/{requestId} {
-        allow read: if isOrgAdmin(orgId) || isSuperAdmin() || (isOrgMember(orgId) && resource.data.staffId == request.auth.uid);
-        allow create: if isOrgMember(orgId) && request.resource.data.staffId == request.auth.uid;
+        allow read: if isOrgAdmin(orgId) || isSuperAdmin() || (isOrgStaff(orgId) && resource.data.staffId == request.auth.uid);
+        allow create: if isOrgStaff(orgId) && request.resource.data.staffId == request.auth.uid;
         // Staff can cancel (update status) if pending
         allow update: if isOrgAdmin(orgId) || isSuperAdmin() ||
-                     (isOrgMember(orgId) && resource.data.staffId == request.auth.uid && resource.data.status == 'Pending');
+                     (isOrgStaff(orgId) && resource.data.staffId == request.auth.uid && resource.data.status == 'Pending');
       }
       
+      // Leave Balances
       match /leaveBalances/{balanceId} {
-        allow read: if isOrgMember(orgId) || isSuperAdmin(); // Staff need to see balances
+        allow read: if isOrgStaff(orgId) || isSuperAdmin(); // Staff need to see balances
         allow write: if isOrgAdmin(orgId) || isSuperAdmin(); // Only admins adjust balances
+        // Allow system to create balances for new staff
+        allow create: if isAuthenticated();
       }
-       match /leaveTypes/{typeId} {
-        allow read: if isOrgMember(orgId) || isSuperAdmin();
+      
+      // Leave Types
+      match /leaveTypes/{typeId} {
+        allow read: if isOrgStaff(orgId) || isSuperAdmin();
         allow write: if isOrgAdmin(orgId) || isSuperAdmin();
+        // Allow system to create types during org setup
+        allow create: if isAuthenticated();
       }
       
       // Payroll
@@ -159,25 +173,48 @@ service cloud.firestore {
         allow read, write: if isOrgAdmin(orgId) || isSuperAdmin();
       }
       match /payrollEntries/{entryId} {
-         allow read: if isOrgAdmin(orgId) || isSuperAdmin() || (isOrgMember(orgId) && resource.data.staffId == request.auth.uid);
+         allow read: if isOrgAdmin(orgId) || isSuperAdmin() || (isOrgStaff(orgId) && resource.data.staffId == request.auth.uid);
          allow write: if isOrgAdmin(orgId) || isSuperAdmin();
       }
       
       // Documents
-       match /documents/{docId} {
-        allow read: if isOrgMember(orgId) || isSuperAdmin();
+      match /documents/{docId} {
+        allow read: if isOrgStaff(orgId) || isSuperAdmin();
         allow write: if isOrgAdmin(orgId) || isSuperAdmin();
       }
       
-       // Subscriptions
-       match /subscriptions/{subId} {
+      // Subscriptions
+      match /subscriptions/{subId} {
         allow read: if isOrgAdmin(orgId) || isSuperAdmin();
         allow write: if isOrgAdmin(orgId) || isSuperAdmin();
+        // Allow creation during signup
+        allow create: if isAuthenticated();
       }
       
-       // Notifications
-       match /notifications/{notifId} {
-        allow read: if (isOrgMember(orgId) && resource.data.userId == request.auth.uid) || isSuperAdmin();
+      // Notifications
+      match /notifications/{notifId} {
+        allow read: if (isOrgStaff(orgId) && resource.data.userId == request.auth.uid) || isSuperAdmin();
+        allow write: if isOrgAdmin(orgId) || isSuperAdmin();
+        // Allow system notifications
+        allow create: if isAuthenticated();
+      }
+      
+      // Organization Settings (attendance rules, lunch, break settings)
+      match /settings/{settingId} {
+        allow read: if isOrgStaff(orgId) || isSuperAdmin();
+        allow write: if isOrgAdmin(orgId) || isSuperAdmin();
+      }
+      
+      // Policy Documents
+      match /policyDocuments/{docId} {
+        allow read: if isOrgStaff(orgId) || isSuperAdmin();
+        allow write: if isOrgAdmin(orgId) || isSuperAdmin();
+      }
+      
+      // Document Acknowledgements
+      match /documentAcknowledgements/{ackId} {
+        allow read: if isOrgStaff(orgId) || isSuperAdmin();
+        allow create: if isOrgStaff(orgId) && request.resource.data.staffId == request.auth.uid;
         allow write: if isOrgAdmin(orgId) || isSuperAdmin();
       }
     }
