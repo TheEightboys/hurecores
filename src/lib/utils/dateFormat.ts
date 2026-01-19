@@ -14,9 +14,17 @@ export function formatDateKE(date: Date | string | number | undefined | null): s
     if (!date) return '-';
 
     try {
-        const dateObj = typeof date === 'string' || typeof date === 'number'
-            ? new Date(date)
-            : date;
+        let dateToParse = date;
+        // Fix for YYYY-MM-DD strings being parsed as UTC midnight
+        // If local timezone is negative (e.g. US), this shifts to previous day
+        // We append T12:00:00 to ensure it stays on the same day relative to local time
+        if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            dateToParse = date + 'T12:00:00';
+        }
+
+        const dateObj = typeof dateToParse === 'string' || typeof dateToParse === 'number'
+            ? new Date(dateToParse)
+            : dateToParse;
 
         if (isNaN(dateObj.getTime())) return '-';
 
@@ -72,9 +80,15 @@ export function formatDateWithDayKE(date: Date | string | number | undefined | n
     if (!date) return '-';
 
     try {
-        const dateObj = typeof date === 'string' || typeof date === 'number'
-            ? new Date(date)
-            : date;
+        let dateToParse = date;
+        // Fix for YYYY-MM-DD strings being parsed as UTC midnight
+        if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            dateToParse = date + 'T12:00:00';
+        }
+
+        const dateObj = typeof dateToParse === 'string' || typeof dateToParse === 'number'
+            ? new Date(dateToParse)
+            : dateToParse;
 
         if (isNaN(dateObj.getTime())) return '-';
 

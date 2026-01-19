@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { leaveService, leaveEntitlementService } from '../../lib/services';
+import { leaveService } from '../../lib/services';
 import type { LeaveRequest, LeaveEntitlement, LeaveStatus } from '../../types';
 
 const MyLeave: React.FC = () => {
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [requests, setRequests] = useState<LeaveRequest[]>([]);
-    const [entitlements, setEntitlements] = useState<LeaveEntitlement[]>([]);
+    const [entitlements, setEntitlements] = useState<any[]>([]); // Using any[] to handle computed properties flexibly
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
 
@@ -47,17 +47,36 @@ const MyLeave: React.FC = () => {
         }
 
         try {
-            const [requestsData, entitlementsData] = await Promise.all([
-                leaveService.getMyLeaveRequests(user.organizationId, user.id),
-                leaveEntitlementService.getStaffEntitlements(user.organizationId, user.id)
-            ]);
-
+            // Fetch requests
+            const requestsData = await leaveService.getMyLeaveRequests(user.organizationId, user.id);
             setRequests(requestsData);
-            setEntitlements(entitlementsData);
+
+            // Fetch balances/entitlements
+            let balances = await leaveService.getStaffBalances(user.organizationId, user.id);
+
+            // Self-healing: If no balances, try to initialize from defaults
+            if (balances.length === 0) {
+                const leaveTypes = await leaveService.getLeaveTypes(user.organizationId);
+                if (leaveTypes.length > 0) {
+                    // Organization has policies, but staff has no balances. Initialize them.
+                    await leaveService.initializeStaffBalances(user.organizationId, user.id);
+                    // Re-fetch
+                    balances = await leaveService.getStaffBalances(user.organizationId, user.id);
+                }
+            }
+
+            // Map to expected structure for UI (renaming fields if necessary)
+            const mappedEntitlements = balances.map(b => ({
+                ...b,
+                leaveTypeName: b.leaveType?.name || 'Unknown',
+                // leaveService returns 'allocated' and 'remaining', so no extra math needed
+            }));
+
+            setEntitlements(mappedEntitlements);
 
             // Default to first active entitlement if available
-            if (entitlementsData.length > 0 && !formData.leaveTypeId) {
-                setFormData(prev => ({ ...prev, leaveTypeId: entitlementsData[0].leaveTypeId }));
+            if (mappedEntitlements.length > 0 && !formData.leaveTypeId) {
+                setFormData(prev => ({ ...prev, leaveTypeId: mappedEntitlements[0].leaveTypeId }));
             }
         } catch (error) {
             console.error('Error loading leave data:', error);

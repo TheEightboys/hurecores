@@ -470,16 +470,27 @@ export const leaveService = {
     const currentYear = new Date().getFullYear();
 
     for (const type of leaveTypes) {
-      await addDoc(collections.leaveBalances(organizationId), {
-        staffId,
-        leaveTypeId: type.id,
-        year: currentYear,
-        totalDays: type.daysAllowed,
-        usedDays: 0,
-        pendingDays: 0,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
+      // Check if balance already exists
+      const q = query(
+        collections.leaveBalances(organizationId),
+        where('staffId', '==', staffId),
+        where('leaveTypeId', '==', type.id),
+        where('year', '==', currentYear)
+      );
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        await addDoc(collections.leaveBalances(organizationId), {
+          staffId,
+          leaveTypeId: type.id,
+          year: currentYear,
+          totalDays: type.daysAllowed,
+          usedDays: 0,
+          pendingDays: 0,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
     }
   },
   /**

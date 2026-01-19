@@ -453,9 +453,19 @@ const PayrollView: React.FC = () => {
                     <span className="text-xl">📋</span>
                     <div className="text-sm text-slate-600">
                         <p className="font-semibold text-slate-700 mb-1">Payroll Calculation Rules:</p>
-                        <p><strong>Paid Units</strong> = Worked Units + Paid Leave Units. <strong>Unpaid Leave + Absent</strong> contribute 0 to pay.</p>
+                        <p><strong>Section 1:</strong> <strong>Paid Units</strong> = Worked Units + Paid Leave Units. <strong>Unpaid Leave + Absent</strong> contribute 0 to pay.</p>
                         <p><strong>Fixed salaries</strong> ignore units for pay (units shown for reporting only). <strong>Prorated</strong> = Monthly Salary × (Paid Units / Month Units).</p>
                         <p className="mt-1 text-slate-500">Leave overrides attendance: if staff has approved leave on a date, that date counts as Paid Leave, not Worked/Absent.</p>
+
+                        <p className="font-semibold text-slate-700 mt-3 mb-1">Section 2: Statutory Deductions (KRA)</p>
+                        <p>Taxable pay includes salary + all cash allowances (per KRA guidelines).</p>
+                        <p><strong>PAYE, NSSF, NHDF, and SHA</strong> are calculated automatically.</p>
+                        <p>Employee portions reduce net pay. Employer portions are shown for cost visibility only and do not affect net pay.</p>
+
+                        <p className="font-semibold text-slate-700 mt-3 mb-1">Section 3: Payments & Remittance</p>
+                        <p>HURE Core prepares and validated payroll calculations.</p>
+                        <p>Payments and statutory remittances are handled externally.</p>
+                        <p className="text-slate-500">Figures shown represent a payroll preview, not payment execution.</p>
                     </div>
                 </div>
             </div>

@@ -120,35 +120,72 @@ const PermissionsDialog: React.FC<{
     );
 };
 
-// System Role Badge Component
-const RoleBadge: React.FC<{ role: SystemRole }> = ({ role }) => {
-    const styles = {
-        OWNER: 'bg-amber-100 text-amber-800 border-amber-200',
-        ADMIN: 'bg-blue-100 text-blue-800 border-blue-200',
-        EMPLOYEE: 'bg-slate-100 text-slate-600 border-slate-200'
-    };
+// Helper to check if license is expired
+const isLicenseExpired = (expiryDate?: string) => {
+    if (!expiryDate) return false;
+    return new Date(expiryDate) < new Date();
+};
+
+const LicenseBadge: React.FC<{ type?: string; number?: string; expiry?: string }> = ({ type, number, expiry }) => {
+    const expired = isLicenseExpired(expiry);
+
+    if (!type && !number) return <span className="text-slate-400">-</span>;
 
     return (
-        <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase border ${styles[role]}`}>
-            {role}
+        <div className="flex flex-col">
+            <span className="font-medium text-slate-700">{type || '-'}</span>
+            <span className="text-xs text-slate-500">{number || '-'}</span>
+            {expired && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mt-1 w-fit">
+                    Expired
+                </span>
+            )}
+            {!expired && expiry && (
+                <span className="text-xs text-slate-400 mt-0.5">Exp: {new Date(expiry).toLocaleDateString()}</span>
+            )}
+        </div>
+    );
+};
+
+const OnboardingBadge: React.FC<{ status?: string }> = ({ status }) => {
+    const styles: Record<string, string> = {
+        'Completed': 'bg-emerald-100 text-emerald-800',
+        'In progress': 'bg-amber-100 text-amber-800',
+        'Not started': 'bg-slate-100 text-slate-600'
+    };
+    const s = status || 'Not started';
+    return (
+        <span className={`px-2 py-1 rounded-full text-xs font-bold ${styles[s] || styles['Not started']}`}>
+            {s}
         </span>
     );
 };
 
-// Status Badge Component
-const StatusBadge: React.FC<{ status: StaffStatus }> = ({ status }) => {
-    const styles: Record<StaffStatus, string> = {
-        'Invited': 'bg-purple-100 text-purple-700',
-        'Active': 'bg-[#e0f2f1] text-[#0f766e]',
-        'Inactive': 'bg-slate-100 text-slate-600',
-        'Archived': 'bg-slate-100 text-slate-500',
-        'On Leave': 'bg-amber-100 text-amber-700',
-        'Terminated': 'bg-red-100 text-red-700'
+const VettingBadge: React.FC<{ status?: string }> = ({ status }) => {
+    const styles: Record<string, string> = {
+        'Verified': 'bg-emerald-100 text-emerald-800',
+        'Pending review': 'bg-amber-100 text-amber-800',
+        'In progress': 'bg-blue-100 text-blue-800',
+        'Not started': 'bg-slate-100 text-slate-600'
     };
-
+    const s = status || 'Not started';
     return (
-        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${styles[status] || styles['Active']}`}>
-            {status}
+        <span className={`px-2 py-1 rounded-full text-xs font-bold ${styles[s] || styles['Not started']}`}>
+            {s}
+        </span>
+    );
+};
+
+// Simplified badges for Account and Invite
+const SimpleBadge: React.FC<{ label: string; type: 'success' | 'warning' | 'neutral' }> = ({ label, type }) => {
+    const styles = {
+        success: 'bg-emerald-100 text-emerald-800',
+        warning: 'bg-amber-100 text-amber-800',
+        neutral: 'bg-slate-100 text-slate-600'
+    };
+    return (
+        <span className={`px-2 py-1 rounded-full text-xs font-bold ${styles[type]}`}>
+            {label}
         </span>
     );
 };
@@ -408,7 +445,10 @@ const StaffManagement: React.FC = () => {
             dailyRateCents: formData.dailyRateCents,
             shiftRateCents: formData.shiftRateCents,
             payMethod: formData.payMethod,
-            permissions: formData.systemRole === 'ADMIN' ? formData.permissions : undefined
+            permissions: formData.systemRole === 'ADMIN' ? formData.permissions : undefined,
+            onboardingStatus: formData.onboardingStatus,
+            vettingStatus: formData.vettingStatus,
+            inviteStatus: formData.inviteStatus
         }, user.organizationId);
 
         if (result.success) {
@@ -428,11 +468,18 @@ const StaffManagement: React.FC = () => {
         return location?.name || '-';
     };
 
+    const [showExpiredOnly, setShowExpiredOnly] = useState(false);
+
     // Filter staff based on tab and location
     const visibleStaff = React.useMemo(() => {
         return staff.filter(s => {
             // Always exclude archived staff
             if (s.staffStatus === 'Archived') return false;
+
+            // Filter for expired licenses if banner button clicked
+            if (showExpiredOnly) {
+                return isLicenseExpired(s.license?.expiryDate);
+            }
 
             // Filter by active/inactive tab
             if (staffTab === 'active' && s.staffStatus === 'Inactive') return false;
@@ -446,11 +493,15 @@ const StaffManagement: React.FC = () => {
             // If no location selected (empty string), show all
             return true;
         });
-    }, [staff, selectedLocation, staffTab]);
+    }, [staff, selectedLocation, staffTab, showExpiredOnly]);
 
     // Count inactive staff for badge
     const inactiveCount = React.useMemo(() => {
         return staff.filter(s => s.staffStatus === 'Inactive').length;
+    }, [staff]);
+
+    const expiredLicensesCount = React.useMemo(() => {
+        return staff.filter(s => isLicenseExpired(s.license?.expiryDate)).length;
     }, [staff]);
 
     if (loading) {
@@ -462,214 +513,160 @@ const StaffManagement: React.FC = () => {
     }
 
     return (
-        <div className="p-8 max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
+        <div className="p-8 max-w-[1600px] mx-auto">
+            <div className="flex justify-between items-start mb-6">
                 <div>
-                    <h2 className="text-2xl font-bold text-[#1a2e35]">Staff Management</h2>
-                    <p className="text-slate-500 mt-1">
-                        {visibleStaff.length} staff members • Admin seats: {adminSeats.used}/{adminSeats.max}
-                    </p>
+                    <h2 className="text-2xl font-bold text-[#1a2e35]">Staff</h2>
+                    <p className="text-slate-500 mt-1">Simple staff scheduling, onboarding & credentialing for clinics</p>
                 </div>
-                <div className="flex space-x-3">
-                    <select
-                        value={selectedLocation}
-                        onChange={(e) => setSelectedLocation(e.target.value)}
-                        className="px-4 py-3 border border-slate-300 rounded-xl font-medium text-[#1a2e35] bg-white hover:border-[#4fd1c5] focus:ring-2 focus:ring-[#4fd1c5] focus:border-[#4fd1c5] transition-colors"
-                    >
-                        <option value="">All Locations</option>
-                        {locations.map(loc => (
-                            <option key={loc.id} value={loc.id}>{loc.name}</option>
-                        ))}
-                    </select>
+                <button
+                    onClick={() => { resetForm(); setShowAddModal(true); }}
+                    className="bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+                >
+                    Add staff
+                </button>
+            </div>
+
+            <div className="mb-6">
+                <h3 className="text-lg font-bold text-[#1a2e35]">Staff onboarding & credentialing</h3>
+                <p className="text-sm text-slate-500">Track contact details, licenses, vetting status and onboarding status for each staff member.</p>
+            </div>
+
+            {/* Expired License Banner */}
+            {expiredLicensesCount > 0 && (
+                <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-6 flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                        <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-bold uppercase">License expired</span>
+                        <span className="font-bold text-slate-800">Action recommended</span>
+                        <span className="text-slate-600 text-sm">
+                            {expiredLicensesCount} staff member(s) have an expired license. Please update documents to avoid compliance issues.
+                        </span>
+                    </div>
                     <button
-                        onClick={() => { resetForm(); setShowAddModal(true); }}
-                        className="bg-[#1a2e35] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#152428] transition-colors flex items-center space-x-2 border border-transparent shadow-md"
+                        className="bg-white border border-slate-200 text-slate-700 px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-slate-50"
+                        onClick={() => alert("Review feature coming soon")}
                     >
-                        <span className="text-[#4fd1c5] font-bold text-lg">+</span>
-                        <span className="text-[#4fd1c5]">Add Staff</span>
+                        Review
                     </button>
                 </div>
-            </div>
-
-            {/* Active / Inactive Tabs */}
-            <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl mb-6 w-fit">
-                <button
-                    onClick={() => setStaffTab('active')}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center space-x-2 ${staffTab === 'active'
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                >
-                    <span>👥 Active Staff</span>
-                </button>
-                <button
-                    onClick={() => setStaffTab('inactive')}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center space-x-2 ${staffTab === 'inactive'
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                >
-                    <span>📦 Inactive</span>
-                    {inactiveCount > 0 && (
-                        <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-xs font-bold">
-                            {inactiveCount}
-                        </span>
-                    )}
-                </button>
-            </div>
+            )}
 
             {/* Staff Table */}
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-                <table className="w-full">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                        <tr>
-                            <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Name</th>
-                            <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Job Title</th>
-                            <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">System Role</th>
-                            <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Status</th>
-                            <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Location</th>
-                            <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Employment</th>
-                            <th className="text-right px-6 py-4 text-sm font-semibold text-slate-600">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {visibleStaff.map((member) => (
-                            <tr key={member.id} className="hover:bg-slate-50 transition-colors">
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center space-x-3">
-                                        <div className="w-10 h-10 bg-[#e0f2f1] rounded-full flex items-center justify-center text-[#1a2e35] font-bold border border-[#4fd1c5]/30">
-                                            {member.fullName?.charAt(0) || '?'}
-                                        </div>
-                                        <div>
-                                            <div className="font-medium text-slate-900">{member.fullName}</div>
-                                            <div className="text-sm text-slate-500">{member.email}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 text-slate-600">{member.jobTitle || '-'}</td>
-                                <td className="px-6 py-4">
-                                    <RoleBadge role={member.systemRole} />
-                                </td>
-                                <td className="px-6 py-4">
-                                    <StatusBadge status={member.staffStatus} />
-                                </td>
-                                <td className="px-6 py-4 text-slate-600">
-                                    {getLocationName(member.locationId)}
-                                </td>
-                                <td className="px-6 py-4 text-slate-600">{member.employmentType}</td>
-                                <td className="px-6 py-4 text-right">
-                                    <div className="flex justify-end space-x-2">
-                                        <button
-                                            onClick={() => openEditModal(member)}
-                                            className="text-[#1a2e35] hover:text-[#4fd1c5] text-sm font-semibold transition-colors"
-                                        >
-                                            Edit
-                                        </button>
-                                        {member.systemRole !== 'OWNER' && (
-                                            <>
-                                                {member.staffStatus === 'Active' ? (
-                                                    <button
-                                                        onClick={() => handleDeactivate(member.id)}
-                                                        className="text-red-600 hover:text-red-700 text-sm font-medium ml-3"
-                                                    >
-                                                        Deactivate
-                                                    </button>
-                                                ) : member.staffStatus !== 'Archived' && (
-                                                    <button
-                                                        onClick={() => handleReactivate(member.id)}
-                                                        className="text-[#0d9488] hover:text-[#0f766e] text-sm font-semibold ml-3"
-                                                    >
-                                                        Reactivate
-                                                    </button>
-                                                )}
-                                            </>
-                                        )}
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-
-                {visibleStaff.length === 0 && pendingInvites.length === 0 && (
-                    <div className="p-12 text-center">
-                        <div className="text-4xl mb-4">👥</div>
-                        <h3 className="text-lg font-semibold text-[#1a2e35] mb-2">No staff members yet</h3>
-                        <p className="text-slate-500 mb-6">Add your first team member to get started</p>
-                        <button
-                            onClick={() => { resetForm(); setShowAddModal(true); }}
-                            className="bg-[#1a2e35] text-[#4fd1c5] px-6 py-3 rounded-xl font-semibold hover:bg-[#152428] shadow-lg"
-                        >
-                            Add Staff Member
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            {/* Pending Invitations Section */}
-            {pendingInvites.length > 0 && (
-                <div className="mt-6 bg-white rounded-2xl border border-slate-200 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-200 bg-amber-50">
-                        <h3 className="font-semibold text-amber-800">
-                            📩 Pending Invitations ({pendingInvites.length})
-                        </h3>
-                        <p className="text-sm text-amber-600 mt-1">
-                            These people have been invited but haven't accepted yet
-                        </p>
-                    </div>
-                    <table className="w-full">
-                        <thead className="bg-slate-50 border-b border-slate-200">
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-white border-b border-slate-100 text-slate-500 font-semibold">
                             <tr>
-                                <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Name</th>
-                                <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Email</th>
-                                <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Role</th>
-                                <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Expires</th>
-                                <th className="text-right px-6 py-3 text-sm font-semibold text-slate-600">Actions</th>
+                                <th className="px-4 py-4 min-w-[100px]">First</th>
+                                <th className="px-4 py-4 min-w-[100px]">Last</th>
+                                <th className="px-4 py-4 min-w-[200px]">Email</th>
+                                <th className="px-4 py-4 min-w-[120px]">Account role</th>
+                                <th className="px-4 py-4 min-w-[120px]">Job role</th>
+                                <th className="px-4 py-4 min-w-[100px]">License type</th>
+                                <th className="px-4 py-4 min-w-[120px]">License #</th>
+                                <th className="px-4 py-4 min-w-[120px]">License expiry</th>
+                                <th className="px-4 py-4 min-w-[120px]">Onboarding</th>
+                                <th className="px-4 py-4 min-w-[120px]">Vetting status</th>
+                                <th className="px-4 py-4 min-w-[100px]">Account</th>
+                                <th className="px-4 py-4 min-w-[100px]">Invite</th>
+                                <th className="px-4 py-4 min-w-[250px]">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {pendingInvites.map((invite) => (
-                                <tr key={invite.id} className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center space-x-3">
-                                            <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 font-bold">
-                                                {invite.fullName?.charAt(0) || '?'}
-                                            </div>
-                                            <span className="font-medium text-slate-900">{invite.fullName}</span>
+                        <tbody className="divide-y divide-slate-50">
+                            {visibleStaff.map((member) => (
+                                <tr key={member.id} className="hover:bg-slate-50/50 transition-colors">
+                                    <td className="px-4 py-4 font-medium text-slate-900">{member.firstName || member.fullName.split(' ')[0]}</td>
+                                    <td className="px-4 py-4 font-medium text-slate-900">{member.lastName || member.fullName.split(' ').slice(1).join(' ')}</td>
+                                    <td className="px-4 py-4 text-slate-600">{member.email}</td>
+                                    <td className="px-4 py-4 text-slate-600">{member.systemRole}</td>
+                                    <td className="px-4 py-4 text-slate-600">{member.jobTitle || '-'}</td>
+                                    <td className="px-4 py-4">
+                                        {member.license?.type || '-'}
+                                    </td>
+                                    <td className="px-4 py-4 text-slate-600">
+                                        {member.license?.number || '-'}
+                                    </td>
+                                    <td className="px-4 py-4">
+                                        {member.license?.expiryDate ? (
+                                            <LicenseBadge expiry={member.license.expiryDate} />
+                                        ) : (
+                                            <span className="text-slate-400">-</span>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-4">
+                                        <OnboardingBadge status={member.onboardingStatus || (member.staffStatus === 'Active' ? 'Completed' : 'Not started')} />
+                                    </td>
+                                    <td className="px-4 py-4">
+                                        <VettingBadge status={member.vettingStatus || (member.license?.verificationStatus === 'Verified' ? 'Verified' : 'Pending review')} />
+                                    </td>
+                                    <td className="px-4 py-4">
+                                        <SimpleBadge
+                                            label={member.staffStatus}
+                                            type={member.staffStatus === 'Active' ? 'success' : 'neutral'}
+                                        />
+                                    </td>
+                                    <td className="px-4 py-4">
+                                        <SimpleBadge
+                                            label={member.inviteStatus || (member.staffStatus === 'Invited' ? 'Pending' : 'None')}
+                                            type={member.staffStatus === 'Invited' ? 'warning' : 'neutral'}
+                                        />
+                                    </td>
+                                    <td className="px-4 py-4">
+                                        <div className="flex items-center space-x-2">
+                                            {member.phone ? (
+                                                <>
+                                                    <a
+                                                        href={`sms:${member.phone}`}
+                                                        className="px-3 py-1 bg-white border border-slate-200 rounded text-xs font-bold text-slate-700 hover:bg-slate-50"
+                                                        title="Send SMS"
+                                                    >
+                                                        SMS
+                                                    </a>
+                                                    <a
+                                                        href={`https://wa.me/${member.phone.replace(/[^0-9]/g, '')}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="px-3 py-1 bg-white border border-slate-200 rounded text-xs font-bold text-slate-700 hover:bg-slate-50"
+                                                        title="Send WhatsApp"
+                                                    >
+                                                        WA
+                                                    </a>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <button disabled className="px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-400 cursor-not-allowed">SMS</button>
+                                                    <button disabled className="px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-400 cursor-not-allowed">WA</button>
+                                                </>
+                                            )}
+                                            <button
+                                                onClick={() => handleDeactivate(member.id)}
+                                                className="px-3 py-1 bg-white border border-slate-200 rounded text-xs font-bold text-slate-700 hover:bg-slate-50"
+                                            >
+                                                Revoke
+                                            </button>
+                                            <button
+                                                onClick={() => openEditModal(member)}
+                                                className="text-blue-600 text-xs font-bold hover:underline ml-2"
+                                            >
+                                                Review Vetting
+                                            </button>
                                         </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-slate-600">{invite.email}</td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${invite.systemRole === 'ADMIN'
-                                            ? 'bg-blue-100 text-blue-800'
-                                            : 'bg-slate-100 text-slate-600'
-                                            }`}>
-                                            {invite.systemRole}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-slate-500">
-                                        {new Date(invite.expiresAt).toLocaleDateString()}
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <button
-                                            onClick={() => handleResendInvite(invite.id)}
-                                            className="text-blue-600 hover:text-blue-700 text-sm font-medium mr-3"
-                                        >
-                                            Resend
-                                        </button>
-                                        <button
-                                            onClick={() => handleCancelInvite(invite.id)}
-                                            className="text-red-600 hover:text-red-700 text-sm font-medium"
-                                        >
-                                            Cancel
-                                        </button>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
+                    {visibleStaff.length === 0 && (
+                        <div className="p-12 text-center text-slate-500">
+                            No staff found.
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
+
+            <div className="mt-4 text-xs text-slate-400">
+                Tip: Keep the dashboard focused — everything else can be a plugin in Settings.
+            </div>
 
             {/* Add Staff Modal */}
             {showAddModal && (
@@ -814,7 +811,10 @@ const StaffManagement: React.FC = () => {
 
                             {/* License Credentials Section */}
                             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                                <h3 className="text-sm font-bold text-blue-900 mb-3">📋 Professional Credentials (Optional)</h3>
+                                <h3 className="text-sm font-bold text-blue-900 mb-1">📋 Professional Credentials</h3>
+                                <p className="text-xs text-slate-500 mb-4 flex items-start">
+                                    <span className="mr-1">💡</span> License credentials can be updated later in the staff profile, but required for all clinical professionals.
+                                </p>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-2">License Type</label>
@@ -862,7 +862,6 @@ const StaffManagement: React.FC = () => {
                                         />
                                     </div>
                                 </div>
-                                <p className="text-xs text-blue-700 mt-3">💡 License credentials can be updated later in the staff profile.</p>
                             </div>
 
                             {/* Compensation fields based on employment type */}
@@ -1065,6 +1064,50 @@ const StaffManagement: React.FC = () => {
                                             <option key={loc.id} value={loc.id}>{loc.name}</option>
                                         ))}
                                     </select>
+                                </div>
+                            </div>
+
+                            {/* Status Management Section */}
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                                <h3 className="text-sm font-bold text-slate-700 mb-3">Status Management</h3>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 mb-1">Onboarding Status</label>
+                                        <select
+                                            value={formData.onboardingStatus || 'Not started'}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, onboardingStatus: e.target.value as any }))}
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                                        >
+                                            <option value="Not started">Not started</option>
+                                            <option value="In progress">In progress</option>
+                                            <option value="Completed">Completed</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 mb-1">Vetting Status</label>
+                                        <select
+                                            value={formData.vettingStatus || 'Not started'}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, vettingStatus: e.target.value as any }))}
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                                        >
+                                            <option value="Not started">Not started</option>
+                                            <option value="In progress">In progress</option>
+                                            <option value="Pending review">Pending review</option>
+                                            <option value="Verified">Verified</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 mb-1">Invite Status</label>
+                                        <select
+                                            value={formData.inviteStatus || 'None'}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, inviteStatus: e.target.value as any }))}
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                                        >
+                                            <option value="None">None</option>
+                                            <option value="Pending">Pending</option>
+                                            <option value="Active">Active</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 

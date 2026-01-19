@@ -208,6 +208,11 @@ export interface Profile {
     verificationStatus: 'Pending' | 'Verified' | 'Expired' | 'Rejected';
     documentUrl?: string;
   };
+  // New fields for Staff Management UI
+  onboardingStatus?: 'Completed' | 'In progress' | 'Not started';
+  vettingStatus?: 'Verified' | 'Pending review' | 'In progress' | 'Not started';
+  inviteStatus?: 'Active' | 'Pending' | 'None';
+
   // Practice Approval
   practiceApproval?: {
     organizationApproved: boolean;

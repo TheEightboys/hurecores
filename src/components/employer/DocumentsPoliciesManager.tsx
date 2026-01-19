@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { policyDocumentsService, storageService, staffService } from '../../lib/services';
+import { policyDocumentsService, storageService, staffService, auditService } from '../../lib/services';
 import type { PolicyDocument, DocumentAcknowledgement, Profile } from '../../types';
 import { JOB_TITLES } from '../../types';
 
@@ -80,6 +80,16 @@ const DocumentsPoliciesManager: React.FC = () => {
                 assignedRoles: uploadForm.assignedRoles,
                 assignedStaffIds: uploadForm.assignedStaffIds,
                 requiresAcknowledgement: uploadForm.requiresAcknowledgement
+            });
+
+            // Log upload action
+            await auditService.logAction(user.organizationId, 'CREATE', 'document', {
+                entityName: uploadForm.name,
+                details: {
+                    type: 'policy_document',
+                    assignedTo: uploadForm.assignedTo,
+                    requiresAcknowledgement: uploadForm.requiresAcknowledgement
+                }
             });
 
             // Reset form and reload
@@ -197,7 +207,15 @@ const DocumentsPoliciesManager: React.FC = () => {
                                         )}
                                     </td>
                                     <td className="px-6 py-4 text-sm text-slate-500">
-                                        {new Date(doc.createdAt).toLocaleDateString()}
+                                        {(() => {
+                                            try {
+                                                const dateVal = doc.createdAt as any;
+                                                const date = dateVal?.toDate ? dateVal.toDate() : new Date(dateVal);
+                                                return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
+                                            } catch (e) {
+                                                return 'Invalid Date';
+                                            }
+                                        })()}
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex gap-2">

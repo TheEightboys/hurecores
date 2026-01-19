@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { attendanceService, settingsService, staffService } from '../../lib/services';
+import { getTodayDateKE, formatDateWithDayKE } from '../../lib/utils/dateFormat';
 import type { AttendanceRecord, AttendanceStatus, OrganizationSettings, Profile } from '../../types';
+
+const formatDurationMs = (ms: number): string => {
+    if (ms < 0) ms = 0;
+    const hours = Math.floor(ms / 3600000);
+    const minutes = Math.floor((ms % 3600000) / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    return `${hours}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
+};
 
 const MyAttendance: React.FC = () => {
     const { user } = useAuth();
@@ -20,11 +29,51 @@ const MyAttendance: React.FC = () => {
     const [startingBreak, setStartingBreak] = useState(false);
     const [endingBreak, setEndingBreak] = useState(false);
 
+    // Live timer
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    // Calculate current states - HOISTED TO TOP
+    const isOnline = todayRecord && todayRecord.clockIn && !todayRecord.clockOut;
+    const isOnLunch = todayRecord?.isOnLunch || false;
+    const isOnBreak = todayRecord?.isOnBreak || false;
+    const hasUsedLunch = todayRecord?.lunchEnd ? true : false;
+    const breakCount = todayRecord?.breakCount || 0;
+
+    // Check if hourly staff
+    const isHourly = profile?.employmentType === 'Hourly';
+
+    // Calculate if actions are available based on settings
+    const lunchEnabled = settings?.lunch?.enabled ?? false;
+    const breaksEnabled = settings?.breaks?.enabled ?? false;
+    const maxBreaksPerDay = settings?.breaks?.maxBreaksPerDay ?? 2;
+    const canTakeLunch = lunchEnabled && isOnline && !isOnLunch && !isOnBreak && !hasUsedLunch;
+    const canTakeBreak = breaksEnabled && isOnline && !isOnLunch && !isOnBreak && breakCount < maxBreaksPerDay;
+
     useEffect(() => {
-        if (user) {
-            loadData();
-        }
-    }, [user?.organizationId, user?.id]);
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    // Calculate duration for live timer
+    const getLiveDuration = () => {
+        if (!todayRecord?.clockIn || !isOnline) return '00:00:00';
+
+        const start = new Date(todayRecord.clockIn).getTime();
+        const now = currentTime.getTime();
+        const diff = Math.max(0, now - start);
+
+        const hours = Math.floor(diff / 3600000);
+        const minutes = Math.floor((diff % 3600000) / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    };
+
+    // Calculate seconds progress for circle (0-100%)
+    const getSecondsProgress = () => {
+        const seconds = currentTime.getSeconds();
+        return (seconds / 60) * 100;
+    };
 
     const loadData = async () => {
         setLoading(true);
@@ -34,7 +83,7 @@ const MyAttendance: React.FC = () => {
         }
 
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const today = getTodayDateKE();
 
             // Load settings, profile, and today's record in parallel
             const [orgSettings, currentUserProfile, todayRecords] = await Promise.all([
@@ -80,6 +129,11 @@ const MyAttendance: React.FC = () => {
             setLoading(false);
         }
     };
+
+    // Trigger data load
+    useEffect(() => {
+        loadData();
+    }, [user?.organizationId, user?.id]);
 
     const handleClockIn = async () => {
         if (!user?.organizationId || !user?.id) return;
@@ -193,22 +247,7 @@ const MyAttendance: React.FC = () => {
         }
     };
 
-    // Calculate current states
-    const isOnline = todayRecord && todayRecord.clockIn && !todayRecord.clockOut;
-    const isOnLunch = todayRecord?.isOnLunch || false;
-    const isOnBreak = todayRecord?.isOnBreak || false;
-    const hasUsedLunch = todayRecord?.lunchEnd ? true : false;
-    const breakCount = todayRecord?.breakCount || 0;
 
-    // Check if hourly staff
-    const isHourly = profile?.employmentType === 'Hourly';
-
-    // Calculate if actions are available based on settings
-    const lunchEnabled = settings?.lunch?.enabled ?? false;
-    const breaksEnabled = settings?.breaks?.enabled ?? false;
-    const maxBreaksPerDay = settings?.breaks?.maxBreaksPerDay ?? 2;
-    const canTakeLunch = lunchEnabled && isOnline && !isOnLunch && !isOnBreak && !hasUsedLunch;
-    const canTakeBreak = breaksEnabled && isOnline && !isOnLunch && !isOnBreak && breakCount < maxBreaksPerDay;
 
     if (loading) {
         return (
@@ -220,20 +259,7 @@ const MyAttendance: React.FC = () => {
 
     return (
         <div className="p-6 md:p-8 max-w-7xl mx-auto flex flex-col animate-in fade-in duration-500">
-            <div className="mb-8">
-                <h2 className="text-2xl font-bold text-slate-900">My Attendance</h2>
-                <p className="text-slate-500">Manage your daily time logs and view history.</p>
-            </div>
-
-            {!user?.organizationId && (
-                <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 text-amber-800">
-                    <span className="text-xl">⚠️</span>
-                    <div>
-                        <p className="font-bold text-sm">Account Verification Needed</p>
-                        <p className="text-xs opacity-90">Your account needs to be verified by an admin to track attendance.</p>
-                    </div>
-                </div>
-            )}
+            {/* ... (header) ... */}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
                 {/* Status Card */}
@@ -248,24 +274,52 @@ const MyAttendance: React.FC = () => {
                         {isOnLunch ? '🍽️ On Lunch' : isOnBreak ? '☕ On Break' : 'Current Status'}
                     </div>
 
-                    <div className={`relative w-48 h-48 rounded-full border-8 flex items-center justify-center mb-8 transition-colors duration-500 ${isOnLunch ? 'border-amber-200 bg-white' :
-                        isOnBreak ? 'border-blue-200 bg-white' :
-                            isOnline ? 'border-emerald-200 bg-white' :
-                                'border-slate-100 bg-slate-50'
-                        } shadow-inner`}>
-                        {isOnline && !isOnLunch && !isOnBreak && <div className="absolute inset-0 rounded-full animate-ping bg-emerald-400 opacity-10"></div>}
-                        <div className="z-10 flex flex-col items-center">
-                            <div className={`text-5xl font-bold font-display ${isOnLunch ? 'text-amber-600' :
+                    <div className="relative w-64 h-64 mb-8 flex items-center justify-center">
+                        {/* Background Circle */}
+                        <div className={`absolute inset-0 rounded-full border-8 opacity-20 ${isOnLunch ? 'border-amber-400' :
+                            isOnBreak ? 'border-blue-400' :
+                                isOnline ? 'border-emerald-400' : 'border-slate-200'
+                            }`}></div>
+
+                        {/* Animated Seconds Ring (only when online) */}
+                        {isOnline && !isOnLunch && !isOnBreak && (
+                            <svg className="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
+                                <circle
+                                    cx="50"
+                                    cy="50"
+                                    r="46"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="8"
+                                    strokeLinecap="round"
+                                    className="text-emerald-500 transition-all duration-1000 ease-linear"
+                                    strokeDasharray="289.026" // 2 * pi * 46
+                                    strokeDashoffset={289.026 - (289.026 * getSecondsProgress()) / 100}
+                                />
+                            </svg>
+                        )}
+
+                        <div className={`relative z-10 flex flex-col items-center justify-center w-56 h-56 rounded-full bg-white shadow-sm border-4 ${isOnLunch ? 'border-amber-100' :
+                            isOnBreak ? 'border-blue-100' :
+                                isOnline ? 'border-emerald-100' : 'border-slate-50'
+                            }`}>
+                            <div className={`text-4xl font-bold font-mono tracking-wider ${isOnLunch ? 'text-amber-600' :
                                 isOnBreak ? 'text-blue-600' :
                                     isOnline ? 'text-emerald-600' :
                                         'text-slate-400'
                                 }`}>
-                                {isOnline ? ((Date.now() - new Date(todayRecord?.clockIn || 0).getTime()) / 3600000).toFixed(1) : '--'}
+                                {isOnline ? getLiveDuration() : '--:--:--'}
                             </div>
-                            <div className="text-xs font-bold text-slate-400 uppercase mt-2">Hours Active</div>
-                            {isOnline && !isOnLunch && !isOnBreak && <div className="mt-2 flex items-center text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full animate-pulse">• LIVE</div>}
-                            {isOnLunch && <div className="mt-2 flex items-center text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">🍽️ LUNCH</div>}
-                            {isOnBreak && <div className="mt-2 flex items-center text-xs font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">☕ BREAK</div>}
+                            <div className="text-xs font-bold text-slate-400 uppercase mt-2">Duration</div>
+
+                            {isOnline && !isOnLunch && !isOnBreak && (
+                                <div className="mt-3 flex items-center text-xs font-bold text-emerald-600 bg-emerald-100 px-3 py-1 rounded-full animate-pulse shadow-sm">
+                                    <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
+                                    LIVE
+                                </div>
+                            )}
+                            {isOnLunch && <div className="mt-3 flex items-center text-xs font-bold text-amber-600 bg-amber-100 px-3 py-1 rounded-full">🍽️ LUNCH</div>}
+                            {isOnBreak && <div className="mt-3 flex items-center text-xs font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-full">☕ BREAK</div>}
                         </div>
                     </div>
 
@@ -445,8 +499,8 @@ const MyAttendance: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="bg-white border border-slate-200 rounded-[1.5rem] shadow-sm overflow-hidden">
-                    <table className="w-full text-left">
+                <div className="bg-white border border-slate-200 rounded-[1.5rem] shadow-sm overflow-hidden overflow-x-auto">
+                    <table className="w-full text-left min-w-[600px]">
                         <thead className="bg-slate-50/50 text-xs uppercase font-bold text-slate-500 border-b border-slate-100">
                             <tr>
                                 <th className="px-6 py-5">Date</th>
@@ -461,7 +515,7 @@ const MyAttendance: React.FC = () => {
                                 <tr key={record.id} className="hover:bg-slate-50 transition-colors group">
                                     <td className="px-6 py-4">
                                         <div className="font-bold text-slate-900">
-                                            {new Date(record.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                            {formatDateWithDayKE(record.date)}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 font-mono text-slate-600 text-sm">
@@ -471,7 +525,34 @@ const MyAttendance: React.FC = () => {
                                         {record.clockOut ? new Date(record.clockOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="font-bold text-slate-900 bg-slate-100 inline-block px-2 py-1 rounded-md text-xs">{record.totalHours?.toFixed(2) || '0.00'}</div>
+                                        <div className="font-bold text-slate-900 bg-slate-100 inline-block px-2 py-1 rounded-md text-xs">
+                                            {(() => {
+                                                if (record.clockIn && record.clockOut) {
+                                                    const start = new Date(record.clockIn).getTime();
+                                                    const end = new Date(record.clockOut).getTime();
+                                                    let duration = end - start;
+
+                                                    // Subtract lunch
+                                                    if (record.lunchStart && record.lunchEnd) {
+                                                        const lunchDur = new Date(record.lunchEnd).getTime() - new Date(record.lunchStart).getTime();
+                                                        duration -= lunchDur;
+                                                    }
+
+                                                    // Subtract breaks
+                                                    if (record.breaks && record.breaks.length > 0) {
+                                                        record.breaks.forEach((b: any) => {
+                                                            if (b.startTime && b.endTime) {
+                                                                const breakDur = new Date(b.endTime).getTime() - new Date(b.startTime).getTime();
+                                                                duration -= breakDur;
+                                                            }
+                                                        });
+                                                    }
+
+                                                    return formatDurationMs(duration);
+                                                }
+                                                return record.totalHours ? `${record.totalHours.toFixed(2)} hrs` : '0h 00m 00s';
+                                            })()}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase border ${getStatusColor(record.status)}`}>

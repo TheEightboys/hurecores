@@ -576,14 +576,13 @@ export const staffService = {
       return { success: false, error: 'Staff member not found' };
     }
 
-    if (profile.systemRole !== 'ADMIN') {
-      return { success: false, error: 'Only Admin users can have permissions' };
+    // Allow permissions for any role (except OWNER which is ignored anyway)
+    if (profile.systemRole === 'OWNER') {
+      return { success: true }; // Owner always has full access
     }
 
-    // Validate at least one permission
-    if (Object.values(permissions).every(v => !v)) {
-      return { success: false, error: 'At least one permission must be selected' };
-    }
+    // Removed restriction that only Admins can have permissions
+    // Removed restriction that at least one permission must be selected (allowing clearing of permissions)
 
     await updateDoc(docs.user(userId), {
       permissions,

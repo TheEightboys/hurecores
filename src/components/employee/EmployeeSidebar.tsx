@@ -26,7 +26,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     const showAdminSection = isOwner || (isAdmin && hasAnyAdminPermission);
 
     const personalLinks = [
-        { name: 'Dashboard', path: '/employee', icon: '📊', exact: true },
+        { name: 'My Dashboard', path: '/employee', icon: '📊', exact: true },
         { name: 'My Attendance', path: '/employee/attendance', icon: '⏰' },
         { name: 'My Schedule', path: '/employee/schedule', icon: '📅' },
         { name: 'My Leave', path: '/employee/leave', icon: '🏖️' },
@@ -39,7 +39,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 
         // Dashboard is always shown for admins
         if (showAdminSection) {
-            links.push({ name: 'Dashboard', path: '/employee/manager', icon: '📊' });
+            links.push({ name: 'Manager Dashboard', path: '/employee/manager', icon: '📊' });
         }
 
         // Staff Management
@@ -107,7 +107,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 
                     {/* Section: MY */}
                     <div>
-                        <div className="px-3 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">MY</div>
+                        <div className="px-3 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">MY Dashboard </div>
                         <nav className="space-y-1">
                             {personalLinks.map((link) => (
                                 <NavLink

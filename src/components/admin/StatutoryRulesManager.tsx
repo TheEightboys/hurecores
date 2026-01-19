@@ -1,494 +1,301 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
 import { statutoryRulesService } from '../../lib/services';
 import type { StatutoryRules, PAYEBand, DeductionPreview } from '../../types';
 
 const StatutoryRulesManager: React.FC = () => {
-    const { user } = useAuth();
+    const [rules, setRules] = useState<StatutoryRules | null>(null);
     const [loading, setLoading] = useState(true);
-    const [currentRules, setCurrentRules] = useState<StatutoryRules | null>(null);
-    const [history, setHistory] = useState<StatutoryRules[]>([]);
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [showHistory, setShowHistory] = useState(false);
-    const [testSalary, setTestSalary] = useState(100000);
+    const [previewSalary, setPreviewSalary] = useState(100000);
+    const [previewAllowances, setPreviewAllowances] = useState(0);
     const [preview, setPreview] = useState<DeductionPreview | null>(null);
-    const [updating, setUpdating] = useState(false);
-
-    // Form state for editing
-    const [editForm, setEditForm] = useState({
-        nssfEmployeeRate: 0.06,
-        nssfEmployerRate: 0.06,
-        nhdfRate: 0.015,
-        shaRate: 0.0275,
-        payeBands: [] as PAYEBand[],
-        notes: ''
-    });
 
     useEffect(() => {
-        loadData();
+        loadRules();
     }, []);
 
     useEffect(() => {
-        if (testSalary > 0) {
+        if (rules) {
             calculatePreview();
         }
-    }, [testSalary, currentRules]);
+    }, [rules, previewSalary, previewAllowances]);
 
-    const loadData = async () => {
+    const loadRules = async () => {
         setLoading(true);
         try {
-            const [rules, rulesHistory] = await Promise.all([
-                statutoryRulesService.getCurrentRules(),
-                statutoryRulesService.getRulesHistory()
-            ]);
-
-            setCurrentRules(rules);
-            setHistory(rulesHistory);
-
-            if (rules) {
-                setEditForm({
-                    nssfEmployeeRate: rules.nssfEmployeeRate,
-                    nssfEmployerRate: rules.nssfEmployerRate,
-                    nhdfRate: rules.nhdfRate,
-                    shaRate: rules.shaRate,
-                    payeBands: [...rules.payeBands],
-                    notes: ''
-                });
-            }
+            const data = await statutoryRulesService.getCurrentRules();
+            setRules(data);
         } catch (error) {
-            console.error('Error loading statutory rules:', error);
+            console.error('Error loading rules:', error);
         } finally {
             setLoading(false);
         }
     };
 
     const calculatePreview = async () => {
-        if (!testSalary || testSalary <= 0) return;
-
+        if (!rules) return;
         try {
-            const result = await statutoryRulesService.calculateDeductions(testSalary, 0);
+            const result = await statutoryRulesService.calculateDeductions(previewSalary, previewAllowances);
             setPreview(result);
         } catch (error) {
             console.error('Error calculating preview:', error);
         }
     };
 
-    const handleUpdateRules = async () => {
-        if (!user) return;
-
-        setUpdating(true);
-        try {
-            await statutoryRulesService.updateRules(
-                user.id,
-                user.email,
-                {
-                    payeBands: editForm.payeBands,
-                    nssfEmployeeRate: editForm.nssfEmployeeRate,
-                    nssfEmployerRate: editForm.nssfEmployerRate,
-                    nhdfRate: editForm.nhdfRate,
-                    shaRate: editForm.shaRate,
-                    notes: editForm.notes
-                }
-            );
-
-            setShowEditModal(false);
-            await loadData();
-            alert('Statutory rules updated successfully!');
-        } catch (error: any) {
-            console.error('Error updating rules:', error);
-            alert('Failed to update rules: ' + error.message);
-        } finally {
-            setUpdating(false);
-        }
-    };
-
-    const handleRevertToDefaults = async () => {
-        if (!user) return;
-        if (!confirm('Are you sure you want to revert to default statutory rules? This will create a new version.')) return;
-
-        setUpdating(true);
-        try {
-            await statutoryRulesService.revertToDefaults(user.id, user.email);
-            await loadData();
-            alert('Statutory rules reverted to defaults successfully!');
-        } catch (error: any) {
-            console.error('Error reverting to defaults:', error);
-            alert('Failed to revert: ' + error.message);
-        } finally {
-            setUpdating(false);
-        }
-    };
-
-    const formatCurrency = (cents: number) => {
-        return `KES ${(cents / 100).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    };
-
-    const formatPercent = (decimal: number) => {
-        return `${(decimal * 100).toFixed(2)}%`;
-    };
-
     if (loading) {
         return (
-            <div className="p-8 flex items-center justify-center min-h-[400px]">
-                <div className="animate-spin w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full"></div>
+            <div className="p-12 flex items-center justify-center">
+                <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
             </div>
         );
     }
 
-    if (!currentRules) {
+    if (!rules) {
         return (
-            <div className="p-8">
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
-                    <p className="text-amber-800">No statutory rules found. Initializing defaults...</p>
-                </div>
+            <div className="p-8 text-center bg-white rounded-2xl border border-slate-200">
+                <div className="text-4xl mb-4">📜</div>
+                <h3 className="text-lg font-bold text-slate-900">No Rules Found</h3>
+                <p className="text-slate-500 mb-4">The statutory rules configuration is missing.</p>
+                <button
+                    onClick={() => statutoryRulesService.createDefaultRules().then(loadRules)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                >
+                    Initialize Default Rules
+                </button>
             </div>
         );
     }
 
     return (
-        <div className="p-6 md:p-8 max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto animate-in fade-in duration-500">
             {/* Header */}
-            <div className="mb-8">
-                <div className="flex items-center justify-between">
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 mb-8 shadow-sm">
+                <div className="flex justify-between items-start">
                     <div>
-                        <h2 className="text-2xl font-bold text-slate-900">Statutory Payroll Rules (Kenya)</h2>
-                        <p className="text-sm text-slate-500 mt-1">
-                            Defines national statutory deductions applied to payroll. Controlled by Super Admin only.
+                        <div className="flex items-center gap-3 mb-2">
+                            <h2 className="text-2xl font-bold text-slate-900">Statutory Payroll Rules ({rules.country})</h2>
+                            {rules.isActive && (
+                                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full uppercase tracking-wide">
+                                    Active
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-slate-500 max-w-2xl">
+                            Defines national statutory deductions applied to payroll across all employers in this system.
+                            These rules are used for calculation and preview only &mdash; HURE Core does not remit statutory payments.
                         </p>
                     </div>
-                    <div className="flex gap-3">
-                        <button
-                            onClick={() => setShowHistory(!showHistory)}
-                            className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors font-medium"
-                        >
-                            {showHistory ? 'Hide History' : 'View Version History'}
-                        </button>
-                        <button
-                            onClick={handleRevertToDefaults}
-                            disabled={updating}
-                            className="px-4 py-2 rounded-xl border border-amber-300 text-amber-700 hover:bg-amber-50 transition-colors font-medium disabled:opacity-50"
-                        >
-                            Revert to Defaults
-                        </button>
-                        <button
-                            onClick={() => setShowEditModal(true)}
-                            className="px-4 py-2 rounded-xl bg-teal-600 text-white hover:bg-teal-700 transition-colors font-bold"
-                        >
-                            Update Rules
-                        </button>
+                    <div className="text-right">
+                        <div className="text-sm font-semibold text-slate-500">Current Version</div>
+                        <div className="text-2xl font-bold text-slate-900">v{rules.version}.0</div>
+                        <button className="text-xs text-blue-600 font-semibold hover:underline mt-1">View Version History</button>
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Column - PAYE Bands */}
-                <div className="lg:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Column: Rules Definition */}
+                <div className="lg:col-span-2 space-y-8">
+
                     {/* PAYE Section */}
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                        <div className="flex items-start gap-4 mb-6">
-                            <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center text-2xl">
-                                📊
-                            </div>
+                    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center text-xl text-orange-600">🧾</div>
                             <div>
-                                <h3 className="text-lg font-bold text-slate-900">Pay As You Earn (PAYE) - Income Tax</h3>
-                                <p className="text-sm text-slate-600">A progressive tax on earnings, with rates from 10% up to 35%</p>
-                                <p className="text-xs text-slate-500 mt-1">Bands (Annual): 10% on allowable; ESS ≥58,000+ 10% cess | 31% rushes</p>
+                                <h3 className="text-lg font-bold text-slate-900">Pay As You Earn (PAYE)</h3>
+                                <p className="text-xs text-slate-500">Progressive tax bands on annual taxable income</p>
                             </div>
                         </div>
 
-                        {/* PAYE Bands Visualization */}
-                        <div className="grid grid-cols-5 gap-2">
-                            {currentRules.payeBands.map((band, idx) => {
-                                const colors = [
-                                    'bg-slate-200 text-slate-800',
-                                    'bg-blue-300 text-blue-900',
-                                    'bg-cyan-400 text-cyan-900',
-                                    'bg-purple-400 text-purple-900',
-                                    'bg-red-500 text-white'
-                                ];
+                        {/* Bands Visual */}
+                        <div className="grid grid-cols-5 gap-0.5 rounded-xl overflow-hidden mb-6 text-center">
+                            {rules.payeBands.map((band, idx) => {
+                                let bg = 'bg-slate-100';
+                                if (band.rate >= 0.35) bg = 'bg-red-500';
+                                else if (band.rate >= 0.325) bg = 'bg-blue-600';
+                                else if (band.rate >= 0.30) bg = 'bg-blue-400';
+                                else if (band.rate >= 0.25) bg = 'bg-sky-400';
+                                else bg = 'bg-emerald-400';
+
                                 return (
-                                    <div key={idx} className={`p-4 rounded-xl ${colors[idx] || 'bg-slate-200'} text-center`}>
-                                        <div className="text-2xl font-bold">{formatPercent(band.rate)}</div>
-                                        <div className="text-xs mt-2 font-medium">{band.label}</div>
-                                        <div className="text-xs mt-1 opacity-75">
-                                            {band.threshold === Infinity ? 'Above' : `Next ${(band.threshold / 1000).toFixed(0)}K`}
-                                        </div>
+                                    <div key={idx} className={`${bg} py-3 text-white`}>
+                                        <div className="text-lg font-bold">{(band.rate * 100).toFixed(1)}%</div>
+                                        {band.rate === 0.1 && <div className="text-[10px] opacity-90 uppercase font-bold mt-1">Tax Free</div>}
                                     </div>
                                 );
                             })}
                         </div>
-                    </div>
 
-                    {/* Other Deductions */}
-                    <div className="grid grid-cols-2 gap-6">
-                        {/* NSSF */}
-                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                            <div className="flex items-start gap-3 mb-4">
-                                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-lg">
-                                    🏦
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-slate-900">National Social Security Fund (NSSF)</h4>
-                                    <p className="text-xs text-slate-600 mt-1">Mandatory pension contribution, 6% from employee (matched by employer)</p>
-                                </div>
-                            </div>
-                            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                                <div className="text-sm text-slate-600">Employee: <span className="font-bold text-blue-700">{formatPercent(currentRules.nssfEmployeeRate)}</span></div>
-                                <div className="text-sm text-slate-600">Employer: <span className="font-bold text-blue-700">{formatPercent(currentRules.nssfEmployerRate)}</span></div>
-                            </div>
-                        </div>
-
-                        {/* NHDF */}
-                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                            <div className="flex items-start gap-3 mb-4">
-                                <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center text-lg">
-                                    🏠
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-slate-900">National Housing Development Fund (NHDF)</h4>
-                                    <p className="text-xs text-slate-600 mt-1">Mandatory contribution for housing</p>
-                                </div>
-                            </div>
-                            <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                                <div className="text-sm text-slate-600">Currently: <span className="font-bold text-green-700">{formatPercent(currentRules.nhdfRate)}</span></div>
-                            </div>
-                        </div>
-
-                        {/* SHA */}
-                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 col-span-2">
-                            <div className="flex items-start gap-3 mb-4">
-                                <div className="w-10 h-10 rounded-lg bg-pink-100 flex items-center justify-center text-lg">
-                                    ❤️
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-slate-900">Social Health Authority (SHA)</h4>
-                                    <p className="text-xs text-slate-600 mt-1">Contribution towards national health insurance</p>
-                                </div>
-                            </div>
-                            <div className="mt-4 p-3 bg-pink-50 rounded-lg inline-block">
-                                <div className="text-sm text-slate-600">Currently: <span className="font-bold text-pink-700">{formatPercent(currentRules.shaRate)}</span></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Note */}
-                    <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600">
-                        ℹ️ HURE Core calculates only. Employers must remit payments per these rules.
-                    </div>
-                </div>
-
-                {/* Right Column - Current Rates & Preview */}
-                <div className="space-y-6">
-                    {/* Current Rates Summary */}
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                        <h3 className="font-bold text-slate-900 mb-4">Current Rates (Kenya)</h3>
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between text-sm">
-                                <span className="text-slate-600">🔸 Controlled by Super Admin only</span>
-                            </div>
-                        </div>
-
-                        <div className="mt-6 space-y-2">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-600">PAYE:</span>
-                                <span className="font-bold text-slate-900">Bands from 10% → 35%</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-600">NSSF:</span>
-                                <span className="font-bold text-slate-900">{formatPercent(currentRules.nssfEmployeeRate)} Employee + {formatPercent(currentRules.nssfEmployerRate)} Employer</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-600">NHDF:</span>
-                                <span className="font-bold text-slate-900">{formatPercent(currentRules.nhdfRate)} of taxable pay</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-600">SHA:</span>
-                                <span className="font-bold text-slate-900">{formatPercent(currentRules.shaRate)} of taxable pay</span>
-                            </div>
-                        </div>
-
-                        <div className="mt-6 pt-6 border-t border-slate-200 text-xs text-slate-500">
-                            <div>Version: {currentRules.version}</div>
-                            <div>Effective: {new Date(currentRules.effectiveFrom).toLocaleDateString('en-KE')}</div>
-                            <div>Updated: {new Date(currentRules.updatedAt).toLocaleDateString('en-KE')}</div>
-                        </div>
-                    </div>
-
-                    {/* Preview Calculator */}
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                        <h3 className="font-bold text-slate-900 mb-4">Preview Calculator</h3>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Test Monthly Salary (KES)</label>
-                            <input
-                                type="number"
-                                value={testSalary}
-                                onChange={(e) => setTestSalary(Number(e.target.value))}
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                            />
-                        </div>
-
-                        {preview && (
-                            <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-slate-600">Gross Pay:</span>
-                                    <span className="font-bold">{formatCurrency(preview.grossPay * 100)}</span>
-                                </div>
-                                <div className="flex justify-between text-red-600">
-                                    <span>PAYE:</span>
-                                    <span className="font-bold">-{formatCurrency(preview.paye * 100)}</span>
-                                </div>
-                                <div className="flex justify-between text-red-600">
-                                    <span>NSSF (Employee):</span>
-                                    <span className="font-bold">-{formatCurrency(preview.nssfEmployee * 100)}</span>
-                                </div>
-                                <div className="flex justify-between text-red-600">
-                                    <span>NHDF:</span>
-                                    <span className="font-bold">-{formatCurrency(preview.nhdf * 100)}</span>
-                                </div>
-                                <div className="flex justify-between text-red-600">
-                                    <span>SHA:</span>
-                                    <span className="font-bold">-{formatCurrency(preview.sha * 100)}</span>
-                                </div>
-                                <div className="flex justify-between pt-2 border-t border-slate-200 font-bold text-green-700">
-                                    <span>Net Pay:</span>
-                                    <span>{formatCurrency(preview.netPay * 100)}</span>
-                                </div>
-                                <div className="flex justify-between text-blue-600 text-xs">
-                                    <span>Employer Cost (+ NSSF):</span>
-                                    <span className="font-bold">{formatCurrency(preview.employerCost * 100)}</span>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Version History */}
-            {showHistory && (
-                <div className="mt-6 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                    <h3 className="font-bold text-slate-900 mb-4">Version History</h3>
-                    <div className="overflow-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-slate-200">
-                                    <th className="text-left py-3 px-4 font-medium text-slate-700">Version</th>
-                                    <th className="text-left py-3 px-4 font-medium text-slate-700">Effective From</th>
-                                    <th className="text-left py-3 px-4 font-medium text-slate-700">Updated By</th>
-                                    <th className="text-left py-3 px-4 font-medium text-slate-700">Notes</th>
-                                    <th className="text-left py-3 px-4 font-medium text-slate-700">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {history.map((rule) => (
-                                    <tr key={rule.id} className="border-b border-slate-100">
-                                        <td className="py-3 px-4">{rule.version}</td>
-                                        <td className="py-3 px-4">{new Date(rule.effectiveFrom).toLocaleDateString('en-KE')}</td>
-                                        <td className="py-3 px-4">{rule.updatedByEmail || 'System'}</td>
-                                        <td className="py-3 px-4 text-xs text-slate-600">{rule.notes || '-'}</td>
-                                        <td className="py-3 px-4">
-                                            {rule.isActive ? (
-                                                <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">Active</span>
-                                            ) : (
-                                                <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-full text-xs">Archived</span>
-                                            )}
-                                        </td>
+                        {/* Bands Table */}
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-slate-50 border-b border-slate-100">
+                                    <tr>
+                                        <th className="py-2 px-3 text-left font-semibold text-slate-600">Band</th>
+                                        <th className="py-2 px-3 text-left font-semibold text-slate-600">Tax Rates</th>
+                                        <th className="py-2 px-3 text-right font-semibold text-slate-600">Threshold (KES)</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-
-            {/* Edit Modal */}
-            {showEditModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                        <div className="p-6 border-b border-slate-200">
-                            <h3 className="text-xl font-bold text-slate-900">Update Statutory Rules</h3>
-                            <p className="text-sm text-slate-600 mt-1">Changes will create a new version</p>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {rules.payeBands.map((band, idx) => (
+                                        <tr key={idx} className="group hover:bg-slate-50">
+                                            <td className="py-3 px-3">
+                                                <div className="font-medium text-slate-900">{band.label}</div>
+                                            </td>
+                                            <td className="py-3 px-3">
+                                                <span className="font-bold text-slate-900">{(band.rate * 100).toFixed(1)}%</span>
+                                            </td>
+                                            <td className="py-3 px-3 text-right text-slate-500 font-mono">
+                                                {band.threshold === Infinity ? 'Unlimited' : band.threshold.toLocaleString()}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
 
-                        <div className="p-6 space-y-6">
-                            {/* NSSF */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">NSSF Employee Rate (%)</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    value={editForm.nssfEmployeeRate * 100}
-                                    onChange={(e) => setEditForm({ ...editForm, nssfEmployeeRate: Number(e.target.value) / 100 })}
-                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg"
-                                />
+                        <div className="mt-4 p-3 bg-slate-50 rounded-lg text-xs text-slate-500">
+                            <strong>Note:</strong> Effective rates include personal relief of KES 2,400/mo (KES 28,800/yr). First KES 24,000/mo is effectively tax-free due to relief.
+                        </div>
+                    </div>
+
+                    {/* Deductions Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* NSSF */}
+                        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-xl text-blue-600">🏦</div>
+                                <div>
+                                    <h3 className="font-bold text-slate-900">NSSF Tier I & II</h3>
+                                    <p className="text-xs text-slate-500">Pension Contribution</p>
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">NSSF Employer Rate (%)</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    value={editForm.nssfEmployerRate * 100}
-                                    onChange={(e) => setEditForm({ ...editForm, nssfEmployerRate: Number(e.target.value) / 100 })}
-                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg"
-                                />
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                                    <span className="text-sm font-medium text-slate-600">Employee Share</span>
+                                    <span className="font-bold text-slate-900 text-lg">{(rules.nssfEmployeeRate * 100)}%</span>
+                                </div>
+                                <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                                    <span className="text-sm font-medium text-slate-600">Employer Match</span>
+                                    <span className="font-bold text-slate-900 text-lg">{(rules.nssfEmployerRate * 100)}%</span>
+                                </div>
                             </div>
+                        </div>
 
+                        {/* NHDF & SHA Container */}
+                        <div className="space-y-6">
                             {/* NHDF */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">NHDF Rate (%)</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    value={editForm.nhdfRate * 100}
-                                    onChange={(e) => setEditForm({ ...editForm, nhdfRate: Number(e.target.value) / 100 })}
-                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg"
-                                />
+                            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center text-xl text-teal-600">🏘️</div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-900">Housing Levy (NHDF)</h3>
+                                        <p className="text-xs text-slate-500">Tax on gross salary</p>
+                                    </div>
+                                </div>
+                                <div className="text-3xl font-bold text-slate-900">{(rules.nhdfRate * 100)}%</div>
+                                <p className="text-xs text-slate-400 mt-1">Matched by employer (1.5%)</p>
                             </div>
 
                             {/* SHA */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">SHA Rate (%)</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    value={editForm.shaRate * 100}
-                                    onChange={(e) => setEditForm({ ...editForm, shaRate: Number(e.target.value) / 100 })}
-                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg"
-                                />
+                            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-10 h-10 bg-pink-100 rounded-xl flex items-center justify-center text-xl text-pink-600">🏥</div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-900">HealthAuth (SHA)</h3>
+                                        <p className="text-xs text-slate-500">Social Health Insurance</p>
+                                    </div>
+                                </div>
+                                <div className="text-3xl font-bold text-slate-900">{(rules.shaRate * 100).toFixed(2)}%</div>
                             </div>
-
-                            {/* Notes */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">Notes (Optional)</label>
-                                <textarea
-                                    value={editForm.notes}
-                                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                                    rows={3}
-                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg"
-                                    placeholder="Reason for update..."
-                                />
-                            </div>
-                        </div>
-
-                        <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
-                            <button
-                                onClick={() => setShowEditModal(false)}
-                                disabled={updating}
-                                className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors font-medium"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleUpdateRules}
-                                disabled={updating}
-                                className="px-6 py-2 rounded-xl bg-teal-600 text-white hover:bg-teal-700 transition-colors font-bold disabled:opacity-50"
-                            >
-                                {updating ? 'Saving...' : 'Save Changes'}
-                            </button>
                         </div>
                     </div>
                 </div>
-            )}
+
+                {/* Right Column: Calculator Preview */}
+                <div className="space-y-6">
+                    <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-lg sticky top-6">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-sm font-bold">KES</div>
+                            <h3 className="font-bold text-lg">Net Pay Preview</h3>
+                        </div>
+
+                        {/* Calculator Inputs */}
+                        <div className="space-y-4 mb-8">
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-400 mb-1">Monthly Basic Salary</label>
+                                <input
+                                    type="number"
+                                    value={previewSalary}
+                                    onChange={(e) => setPreviewSalary(Number(e.target.value))}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-emerald-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-400 mb-1">Taxable Allowances</label>
+                                <input
+                                    type="number"
+                                    value={previewAllowances}
+                                    onChange={(e) => setPreviewAllowances(Number(e.target.value))}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-emerald-500"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Breakdown */}
+                        {preview ? (
+                            <div className="space-y-3 pt-6 border-t border-slate-700">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-slate-400">Taxable Pay</span>
+                                    <span className="font-mono text-white">{preview.taxablePay.toLocaleString()}</span>
+                                </div>
+                                <div className="h-px bg-slate-800 my-2"></div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-red-300">PAYE (Tax)</span>
+                                    <span className="font-mono text-red-300">-{preview.paye.toFixed(0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-red-300">NSSF (Pension)</span>
+                                    <span className="font-mono text-red-300">-{preview.nssfEmployee.toFixed(0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-red-300">NHDF (Housing)</span>
+                                    <span className="font-mono text-red-300">-{preview.nhdf.toFixed(0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-red-300">SHA (Health)</span>
+                                    <span className="font-mono text-red-300">-{preview.sha.toFixed(0).toLocaleString()}</span>
+                                </div>
+
+                                <div className="h-px bg-slate-700 my-3"></div>
+
+                                <div className="flex justify-between items-end">
+                                    <span className="text-sm font-bold text-emerald-400">Net Pay</span>
+                                    <span className="text-2xl font-bold text-white tracking-tight">
+                                        KES {preview.netPay.toFixed(0).toLocaleString()}
+                                    </span>
+                                </div>
+
+                                <div className="mt-4 p-3 bg-slate-800 rounded-lg border border-slate-700 text-xs text-slate-400 leading-relaxed">
+                                    This confirms the rules above are generating valid payroll outputs.
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center text-slate-500 text-sm py-4">Calculating...</div>
+                        )}
+                    </div>
+
+                    <button
+                        disabled
+                        className="w-full py-3 bg-slate-200 text-slate-400 font-bold rounded-xl cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                        <span>🔒</span> Update Rules (Disabled)
+                    </button>
+                    <p className="text-center text-xs text-slate-400">
+                        Updates affecting payroll logic must be verified by technical team first.
+                    </p>
+                </div>
+            </div>
         </div>
     );
 };

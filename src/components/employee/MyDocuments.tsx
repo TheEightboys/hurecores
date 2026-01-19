@@ -55,13 +55,13 @@ const MyDocuments: React.FC = () => {
                 user.organizationId,
                 docId,
                 user.id,
-                user.fullName
+                user.name || 'Unknown'
             );
             setAcknowledgements(prev => ({ ...prev, [docId]: true }));
             setSelectedDoc(null);
         } catch (error) {
             console.error('Error acknowledging document:', error);
-            alert('Failed to acknowledge document');
+            alert(`Failed to acknowledge document: ${(error as Error).message}`);
         } finally {
             setAcknowledging(null);
         }
@@ -119,7 +119,15 @@ const MyDocuments: React.FC = () => {
                                         <p className="text-sm text-slate-500 mt-1">{doc.description}</p>
                                     )}
                                     <p className="text-xs text-slate-400 mt-2">
-                                        Uploaded {new Date(doc.createdAt).toLocaleDateString()}
+                                        Uploaded {(() => {
+                                            try {
+                                                const dateVal = doc.createdAt as any;
+                                                const date = dateVal?.toDate ? dateVal.toDate() : new Date(dateVal);
+                                                return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
+                                            } catch (e) {
+                                                return 'Invalid Date';
+                                            }
+                                        })()}
                                     </p>
                                 </div>
                             </div>

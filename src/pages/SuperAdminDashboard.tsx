@@ -75,6 +75,7 @@ const SuperAdminDashboard: React.FC = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'organizations' | 'billing' | 'statutory' | 'audit' | 'settings'>('overview');
+    const [initialApprovalFilter, setInitialApprovalFilter] = useState<'Pending Review' | 'All'>('Pending Review');
 
     // Data
     const [stats, setStats] = useState({
@@ -262,7 +263,11 @@ const SuperAdminDashboard: React.FC = () => {
                     {tabs.map(tab => (
                         <button
                             key={tab.id}
-                            onClick={() => { setActiveTab(tab.id as any); setSearchQuery(''); }}
+                            onClick={() => {
+                                setActiveTab(tab.id as any);
+                                setSearchQuery('');
+                                if (tab.id === 'approvals') setInitialApprovalFilter('All');
+                            }}
                             className={`w-full text-left px-4 py-3 rounded-xl transition-all flex justify-between items-center ${activeTab === tab.id
                                 ? 'text-[#1a2e35] shadow-lg'
                                 : 'text-white/70 hover:bg-white/10 hover:text-white'
@@ -346,7 +351,7 @@ const SuperAdminDashboard: React.FC = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                 {/* Pending Approvals */}
                                 <button
-                                    onClick={() => setActiveTab('approvals')}
+                                    onClick={() => { setActiveTab('approvals'); setInitialApprovalFilter('Pending Review'); }}
                                     className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all text-left group cursor-pointer"
                                 >
                                     <div className="flex items-center gap-3 mb-3">
@@ -513,7 +518,7 @@ const SuperAdminDashboard: React.FC = () => {
                 )}
 
                 {/* Approvals Tab */}
-                {activeTab === 'approvals' && <ApprovalsManager />}
+                {activeTab === 'approvals' && <ApprovalsManager initialFilter={initialApprovalFilter} key={initialApprovalFilter} />}
 
                 {/* Organizations Tab */}
                 {activeTab === 'organizations' && <OrganizationsManager />}

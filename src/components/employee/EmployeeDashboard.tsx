@@ -105,7 +105,7 @@ const EmployeeDashboard: React.FC = () => {
         <div className="p-6 md:p-8 max-w-7xl mx-auto animate-in fade-in duration-500">
             {/* Header */}
             <div className="mb-8">
-                <h2 className="text-2xl font-bold text-slate-900">Dashboard</h2>
+                <h2 className="text-2xl font-bold text-slate-900">My Dashboard</h2>
                 <div className="flex items-center gap-2 mt-1 text-sm text-slate-500">
                     <span className="font-medium text-[#0f766e]">Today: {todayStr}</span>
                     {location && <span>• 📍 {location.name}</span>}
@@ -134,7 +134,14 @@ const EmployeeDashboard: React.FC = () => {
                                                 <span className="text-xs font-mono text-slate-500">{todayShift.id.slice(0, 6)}</span>
                                             </div>
                                             <div className="text-2xl font-bold text-slate-900 mb-1">
-                                                {new Date(todayShift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(todayShift.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                {(() => {
+                                                    const formatTime = (dateStr: string) => {
+                                                        if (!dateStr) return '--:--';
+                                                        const d = new Date(dateStr);
+                                                        return isNaN(d.getTime()) ? '--:--' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                                    };
+                                                    return `${formatTime(todayShift.startTime)} - ${formatTime(todayShift.endTime)}`;
+                                                })()}
                                             </div>
                                             <div className="flex items-center gap-2 text-sm text-slate-500">
                                                 <span>🩺 {user?.jobTitle || 'Staff'}</span>

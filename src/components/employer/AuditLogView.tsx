@@ -153,6 +153,18 @@ const AuditLogView: React.FC = () => {
                             Apply Filters
                         </button>
                     </div>
+                    <div className="flex items-end">
+                        <button
+                            onClick={async () => {
+                                setLoading(true);
+                                await auditService.logAction(user?.organizationId || '', 'TEST', 'manual_test', { details: { description: 'User verified audit logs' } });
+                                setTimeout(loadAuditLog, 1000); // Wait for propagation
+                            }}
+                            className="w-full px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-300"
+                        >
+                            + Test Log
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -196,9 +208,16 @@ const AuditLogView: React.FC = () => {
                                     </td>
                                     <td className="px-6 py-4 text-sm text-slate-600">
                                         {entry.details ? (
-                                            <span className="text-xs bg-slate-100 px-2 py-1 rounded">
-                                                {JSON.stringify(entry.details).slice(0, 50)}...
-                                            </span>
+                                            <div className="text-xs space-y-1">
+                                                {Object.entries(entry.details).map(([key, value]) => (
+                                                    <div key={key} className="flex gap-1">
+                                                        <span className="font-semibold text-slate-700 capitalize">{key.replace(/_/g, ' ')}:</span>
+                                                        <span className="text-slate-600 break-all">
+                                                            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         ) : '—'}
                                     </td>
                                 </tr>

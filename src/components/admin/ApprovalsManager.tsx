@@ -71,10 +71,14 @@ interface Facility {
 // COMPONENT
 // =====================================================
 
-const ApprovalsManager: React.FC = () => {
+interface ApprovalsManagerProps {
+    initialFilter?: ApprovalStatus | 'All';
+}
+
+const ApprovalsManager: React.FC<ApprovalsManagerProps> = ({ initialFilter = 'Pending Review' }) => {
     const { user } = useAuth();
     const [activeSubTab, setActiveSubTab] = useState<'organizations' | 'facilities'>('organizations');
-    const [statusFilter, setStatusFilter] = useState<ApprovalStatus | 'All'>('Pending Review');
+    const [statusFilter, setStatusFilter] = useState<ApprovalStatus | 'All'>(initialFilter);
     const [searchQuery, setSearchQuery] = useState('');
 
     // Data
@@ -132,53 +136,68 @@ const ApprovalsManager: React.FC = () => {
             });
             setOrganizations(orgsData);
 
-            // Load Facilities (from locations collection with verification data)
-            const locsQuery = query(collection(db, 'locations'), orderBy('createdAt', 'desc'));
-            const locsSnap = await getDocs(locsQuery);
+            // Load Facilities (Iterate through orgs to avoid collectionGroup index requirement)
             const facilitiesData: Facility[] = [];
 
-            for (const locDoc of locsSnap.docs) {
-                const data = locDoc.data();
-                const parentOrg = orgsData.find(o => o.id === data.organizationId);
+            await Promise.all(orgsData.map(async (org) => {
+                const locsQuery = query(collection(db, 'organizations', org.id, 'locations'));
+                const locsSnap = await getDocs(locsQuery);
 
-                // Check if facility has verification request
-                const verQuery = query(
-                    collection(db, 'verificationRequests'),
-                    where('locationId', '==', locDoc.id),
-                    where('type', '==', 'FACILITY')
-                );
-                const verSnap = await getDocs(verQuery);
+                for (const locDoc of locsSnap.docs) {
+                    const data = locDoc.data();
 
-                let approvalStatus: ApprovalStatus = 'Pending Review';
-                let licenseInfo = {};
+                    // Check if facility has verification request
+                    const verQuery = query(
+                        collection(db, 'verificationRequests'),
+                        where('locationId', '==', locDoc.id),
+                        where('type', '==', 'FACILITY')
+                    );
+                    const verSnap = await getDocs(verQuery);
 
-                if (!verSnap.empty) {
-                    const verData = verSnap.docs[0].data();
-                    if (verData.status === 'Approved') approvalStatus = 'Approved';
-                    else if (verData.status === 'Active') approvalStatus = 'Active';
-                    else if (verData.status === 'Rejected') approvalStatus = 'Rejected';
-                    else if (verData.status === 'Suspended') approvalStatus = 'Suspended';
+                    let approvalStatus: ApprovalStatus = 'Pending Review';
+                    let licenseInfo = {};
 
-                    licenseInfo = {
-                        licenseNumber: verData.licenseNumber,
-                        licensingBody: verData.licensingBody,
-                        licenseDocUrl: verData.documentUrl,
-                        expiryDate: verData.expiryDate
-                    };
+                    if (!verSnap.empty) {
+                        const verData = verSnap.docs[0].data();
+                        if (verData.status === 'Approved') approvalStatus = 'Approved';
+                        else if (verData.status === 'Active') approvalStatus = 'Active';
+                        else if (verData.status === 'Rejected') approvalStatus = 'Rejected';
+                        else if (verData.status === 'Suspended') approvalStatus = 'Suspended';
+
+                        licenseInfo = {
+                            licenseNumber: verData.licenseNumber,
+                            licensingBody: verData.licensingBody,
+                            licenseDocUrl: verData.documentUrl,
+                            expiryDate: verData.expiryDate
+                        };
+                    } else {
+                        // If no verification request, infer status from location data or default to Pending
+                        if (data.verificationStatus === 'Approved') approvalStatus = 'Approved';
+                        else if (data.verificationStatus === 'Active') approvalStatus = 'Active';
+                        // else default to Pending Review so it shows up
+                    }
+
+                    facilitiesData.push({
+                        id: locDoc.id,
+                        organizationId: org.id,
+                        organizationName: org.name || 'Unknown',
+                        name: data.name,
+                        city: data.city || data.address?.city || 'N/A',
+                        phone: data.phone,
+                        approvalStatus,
+                        ...licenseInfo,
+                        createdAt: data.createdAt
+                    });
                 }
+            }));
 
-                facilitiesData.push({
-                    id: locDoc.id,
-                    organizationId: data.organizationId,
-                    organizationName: parentOrg?.name || 'Unknown',
-                    name: data.name,
-                    city: data.city || data.address?.city || 'N/A',
-                    phone: data.phone,
-                    approvalStatus,
-                    ...licenseInfo,
-                    createdAt: data.createdAt
-                });
-            }
+            // Sort manually since we fetched in parallel
+            facilitiesData.sort((a, b) => {
+                const tA = a.createdAt?.seconds || 0;
+                const tB = b.createdAt?.seconds || 0;
+                return tB - tA;
+            });
+
             setFacilities(facilitiesData);
 
         } catch (error) {

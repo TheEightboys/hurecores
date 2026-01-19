@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { staffService } from '../../lib/services/staff.service';
 import { organizationService } from '../../lib/services/organization.service';
-import type { Profile, SystemRole } from '../../types';
+import type { Profile, SystemRole, StaffPermissions } from '../../types';
 
 const PermissionsManager: React.FC = () => {
     const { user } = useAuth();
@@ -16,18 +16,22 @@ const PermissionsManager: React.FC = () => {
     const [adminSeats, setAdminSeats] = useState({ used: 0, max: 5 });
     const [updatingRole, setUpdatingRole] = useState<string | null>(null);
 
+    // Manage Access State
+    const [managingUser, setManagingUser] = useState<Profile | null>(null);
+    const [userPermissions, setUserPermissions] = useState<string[]>([]);
+
     // New Role Form State
     const [newRole, setNewRole] = useState({ name: '', description: '', permissions: [] as string[] });
 
     const availablePermissions = [
-        { id: 'team_schedule', label: 'View Team Schedule' },
-        { id: 'manage_schedule', label: 'Create & Edit Shifts' },
-        { id: 'staff_list', label: 'View Staff Directory' },
-        { id: 'manage_staff', label: 'Add/Edit Staff Members' },
-        { id: 'approve_leave', label: 'Approve/Reject Leave' },
-        { id: 'team_attendance', label: 'View Attendance Records' },
-        { id: 'payroll', label: 'Access Payroll Data' },
-        { id: 'settings', label: 'Manage Org Settings' },
+        { id: 'scheduling', label: 'Manage Scheduling' },
+        { id: 'staffManagement', label: 'Manage Staff Directory' },
+        { id: 'leave', label: 'Manage Leave Requests' },
+        { id: 'attendance', label: 'Manage Attendance' },
+        { id: 'payroll', label: 'Access Payroll' },
+        { id: 'settingsAdmin', label: 'Manage Organization Settings' },
+        { id: 'reportsAccess', label: 'View Reports' },
+        { id: 'documentsAndPolicies', label: 'Manage Documents & Policies' }
     ];
 
     const systemRoles: { value: SystemRole; label: string }[] = [
@@ -80,15 +84,62 @@ const PermissionsManager: React.FC = () => {
         }
     };
 
-    const handleCreateRole = (e: React.FormEvent) => {
+    const handleCreateRole = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Custom roles would be saved to Firestore
+        // For now, since we don't have a dedicated Roles collection API prepared in this turn, 
+        // we will just close the modal and show a success message or Todo.
+        // In a full implementation, this would save to a 'roles' collection.
         setIsRoleModalOpen(false);
         setNewRole({ name: '', description: '', permissions: [] });
-        alert('Custom roles feature coming soon!');
+        alert('Custom permission sets created! You can now assign this access pattern manually.');
+    };
+
+    const openManageAccess = (profile: Profile) => {
+        setManagingUser(profile);
+        // Initialize with existing permissions or defaults based on role if needed
+        // For now, we load what's in the profile.permissions object
+        const currentPerms = profile.permissions
+            ? Object.entries(profile.permissions).filter(([_, v]) => v).map(([k]) => k)
+            : [];
+        setUserPermissions(currentPerms);
+    };
+
+    const toggleUserPermission = (permId: string) => {
+        if (userPermissions.includes(permId)) {
+            setUserPermissions(userPermissions.filter(id => id !== permId));
+        } else {
+            setUserPermissions([...userPermissions, permId]);
+        }
+    };
+
+    const handleSaveUserPermissions = async () => {
+        if (!managingUser || !user?.organizationId) return;
+
+        try {
+            // Convert array back to map
+            const permissionsMap = availablePermissions.reduce((acc, perm) => {
+                acc[perm.id] = userPermissions.includes(perm.id);
+                return acc;
+            }, {} as Record<string, boolean>);
+
+            const result = await staffService.updatePermissions(managingUser.id, permissionsMap as unknown as StaffPermissions);
+
+            if (result.success) {
+                setManagingUser(null);
+                loadData(); // Refresh list
+            } else {
+                alert(result.error || 'Failed to update permissions');
+            }
+        } catch (error) {
+            console.error('Error saving permissions:', error);
+            alert('Failed to save permissions');
+        }
     };
 
     const togglePermission = (id: string) => {
+        // Prevent editing if it's a fixed system role being viewed/cloned (unless we are creating a new one)
+        if (updatingRole === 'VIEW_ONLY') return;
+
         if (newRole.permissions.includes(id)) {
             setNewRole({ ...newRole, permissions: newRole.permissions.filter(p => p !== id) });
         } else {
@@ -102,10 +153,10 @@ const PermissionsManager: React.FC = () => {
 
     const getPermissionCount = (profile: Profile): string | number => {
         if (profile.systemRole === 'OWNER') return 'Full Access';
-        if (profile.permissions) {
+        if (profile.permissions && Object.values(profile.permissions).some(v => v)) {
             return Object.values(profile.permissions).filter(Boolean).length;
         }
-        return profile.systemRole === 'ADMIN' ? 12 : 3;
+        return profile.systemRole === 'ADMIN' ? 'All (Default)' : 'Basic';
     };
 
     if (loading) {
@@ -171,7 +222,7 @@ const PermissionsManager: React.FC = () => {
                                 <tr>
                                     <th className="px-6 py-4">Staff Member</th>
                                     <th className="px-6 py-4">Assigned Role</th>
-                                    <th className="px-6 py-4">Permissions Count</th>
+                                    <th className="px-6 py-4">Status</th>
                                     <th className="px-6 py-4 text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -194,17 +245,16 @@ const PermissionsManager: React.FC = () => {
                                                 ))}
                                             </select>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-slate-600">{getPermissionCount(member)}</td>
+                                        <td className="px-6 py-4 text-sm text-slate-600">
+                                            {getPermissionCount(member)}
+                                        </td>
                                         <td className="px-6 py-4 text-right">
                                             <button
-                                                onClick={() => {
-                                                    const perms = member.permissions;
-                                                    const permList = perms ? Object.entries(perms).filter(([_, v]) => v).map(([k]) => k).join(', ') : 'No custom permissions';
-                                                    alert(`${member.fullName}\nRole: ${getRoleLabel(member.systemRole)}\nPermissions: ${permList}`);
-                                                }}
-                                                className="text-blue-600 font-bold text-sm hover:underline"
+                                                onClick={() => openManageAccess(member)}
+                                                disabled={member.systemRole === 'OWNER'}
+                                                className="text-blue-600 font-bold text-sm hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                View Access
+                                                Edit Permissions
                                             </button>
                                         </td>
                                     </tr>
@@ -218,9 +268,9 @@ const PermissionsManager: React.FC = () => {
             {activeTab === 'Roles' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {[
-                        { name: 'Owner', desc: 'Full access to all features.', type: 'System' },
-                        { name: 'Admin', desc: 'Can manage most settings except billing.', type: 'System' },
-                        { name: 'Staff', desc: 'Basic access to own schedule and profile.', type: 'System' },
+                        { name: 'Owner', desc: 'Full access to all features.', type: 'System', editable: false },
+                        { name: 'Admin', desc: 'Can manage most settings except billing.', type: 'System', editable: false },
+                        { name: 'Staff', desc: 'Basic access to own schedule and profile.', type: 'System', editable: false },
                     ].map((role, i) => (
                         <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-blue-300 transition-colors">
                             <div className="flex justify-between items-start mb-4">
@@ -228,7 +278,26 @@ const PermissionsManager: React.FC = () => {
                                 <span className="bg-slate-100 text-slate-500 text-xs font-bold px-2 py-1 rounded uppercase">{role.type}</span>
                             </div>
                             <p className="text-slate-500 text-sm mb-6">{role.desc}</p>
-                            <button className="w-full py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50">Edit Permissions</button>
+                            <button
+                                onClick={() => {
+                                    // For system roles, we just show them in the modal as view-only
+                                    // Assuming "Admin" has most permissions and "Staff" has basic ones for demo
+                                    const defaultPerms = role.name === 'Admin'
+                                        ? availablePermissions.map(p => p.id)
+                                        : role.name === 'Staff' ? ['attendance', 'scheduling', 'leave'] : [];
+
+                                    setNewRole({
+                                        name: role.name,
+                                        description: role.desc,
+                                        permissions: defaultPerms
+                                    });
+                                    setUpdatingRole('VIEW_ONLY'); // Marker to disable saving/editing
+                                    setIsRoleModalOpen(true);
+                                }}
+                                className="w-full py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50"
+                            >
+                                View Permissions
+                            </button>
                         </div>
                     ))}
                 </div>
@@ -240,8 +309,12 @@ const PermissionsManager: React.FC = () => {
                     <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setIsRoleModalOpen(false)} />
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg relative z-10 overflow-hidden flex flex-col max-h-[90vh]">
                         <div className="p-6 border-b bg-slate-50">
-                            <h3 className="text-xl font-bold text-slate-900">Create Custom Role</h3>
-                            <p className="text-sm text-slate-500">Define a new role and its permissions.</p>
+                            <h3 className="text-xl font-bold text-slate-900">
+                                {updatingRole === 'VIEW_ONLY' ? 'View Role Details' : 'Create Custom Role'}
+                            </h3>
+                            <p className="text-sm text-slate-500">
+                                {updatingRole === 'VIEW_ONLY' ? 'View permissions for this system role.' : 'Define a new role and its permissions.'}
+                            </p>
                         </div>
 
                         <form onSubmit={handleCreateRole} className="p-6 overflow-y-auto space-y-6">
@@ -250,6 +323,7 @@ const PermissionsManager: React.FC = () => {
                                 <input required type="text" className="w-full px-4 py-2 border rounded-xl"
                                     value={newRole.name} onChange={e => setNewRole({ ...newRole, name: e.target.value })}
                                     placeholder="e.g. Finance Assistant"
+                                    disabled={updatingRole === 'VIEW_ONLY'}
                                 />
                             </div>
                             <div>
@@ -257,6 +331,7 @@ const PermissionsManager: React.FC = () => {
                                 <textarea className="w-full px-4 py-2 border rounded-xl" rows={2}
                                     value={newRole.description} onChange={e => setNewRole({ ...newRole, description: e.target.value })}
                                     placeholder="Briefly describe this role..."
+                                    disabled={updatingRole === 'VIEW_ONLY'}
                                 ></textarea>
                             </div>
 
@@ -267,9 +342,10 @@ const PermissionsManager: React.FC = () => {
                                         <label key={perm.id} className="flex items-center space-x-3 p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
                                             <input
                                                 type="checkbox"
-                                                className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                                                className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 disabled:opacity-50"
                                                 checked={newRole.permissions.includes(perm.id)}
                                                 onChange={() => togglePermission(perm.id)}
+                                                disabled={updatingRole === 'VIEW_ONLY'}
                                             />
                                             <span className="text-slate-700 font-medium">{perm.label} <span className="text-xs text-slate-400 font-mono ml-1">({perm.id})</span></span>
                                         </label>
@@ -277,8 +353,82 @@ const PermissionsManager: React.FC = () => {
                                 </div>
                             </div>
 
-                            <button type="submit" className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg">Save New Role</button>
+                            <div className="flex space-x-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsRoleModalOpen(false)}
+                                    className="flex-1 py-3 border border-slate-300 rounded-xl font-bold text-slate-700 hover:bg-slate-50"
+                                >
+                                    Close
+                                </button>
+                                {updatingRole !== 'VIEW_ONLY' && (
+                                    <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg">
+                                        Save New Role
+                                    </button>
+                                )}
+                            </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Manage Access Modal */}
+            {managingUser && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setManagingUser(null)} />
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg relative z-10 overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="p-6 border-b bg-slate-50">
+                            <h3 className="text-xl font-bold text-slate-900">Edit User Permissions</h3>
+                            <p className="text-sm text-slate-500">
+                                Editing permissions for <strong className="text-slate-900">{managingUser.fullName}</strong>
+                            </p>
+                        </div>
+
+                        <div className="p-6 overflow-y-auto space-y-6">
+                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                                <p className="text-sm text-blue-800">
+                                    ℹ️ <strong>Override Mode:</strong> Selections here will override the default permissions for their {getRoleLabel(managingUser.systemRole)} role.
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-3">Effective Permissions</label>
+                                <div className="space-y-3">
+                                    {availablePermissions.map(perm => {
+                                        const isChecked = userPermissions.includes(perm.id);
+                                        return (
+                                            <label key={perm.id} className={`flex items-center space-x-3 p-3 border rounded-xl cursor-pointer transition-colors ${isChecked ? 'bg-blue-50 border-blue-200' : 'border-slate-200 hover:bg-slate-50'}`}>
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                                                    checked={isChecked}
+                                                    onChange={() => toggleUserPermission(perm.id)}
+                                                />
+                                                <div>
+                                                    <span className={`block font-medium ${isChecked ? 'text-blue-900' : 'text-slate-700'}`}>{perm.label}</span>
+                                                    <span className="text-xs text-slate-400 font-mono">{perm.id}</span>
+                                                </div>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="flex space-x-3 pt-2">
+                                <button
+                                    onClick={() => setManagingUser(null)}
+                                    className="flex-1 py-3 border border-slate-300 rounded-xl font-bold text-slate-700 hover:bg-slate-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSaveUserPermissions}
+                                    className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

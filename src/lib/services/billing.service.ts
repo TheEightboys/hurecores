@@ -36,9 +36,9 @@ import type {
 // COLLECTION REFERENCES
 // =====================================================
 
-const subscriptionsRef = collection(db, 'subscriptions');
 const paymentsRef = collection(db, 'payments');
 const billingLogsRef = collection(db, 'billing_logs');
+// subscriptionsRef removed - use dynamic subcollection
 
 // =====================================================
 // SUBSCRIPTION MANAGEMENT
@@ -51,8 +51,7 @@ export const billingService = {
     async getSubscription(organizationId: string): Promise<Subscription | null> {
         try {
             const q = query(
-                subscriptionsRef,
-                where('organizationId', '==', organizationId),
+                collection(db, 'organizations', organizationId, 'subscriptions'),
                 limit(1)
             );
             const snapshot = await getDocs(q);
@@ -108,7 +107,7 @@ export const billingService = {
             updatedAt: serverTimestamp(),
         };
 
-        const docRef = await addDoc(subscriptionsRef, subscriptionData);
+        const docRef = await addDoc(collection(db, 'organizations', organizationId, 'subscriptions'), subscriptionData);
 
         // Log trial start
         await this.logBillingEvent(organizationId, 'TRIAL_START', {
@@ -285,7 +284,7 @@ export const billingService = {
             updates.suspensionReason = null;
         }
 
-        const subRef = doc(db, 'subscriptions', subscription.id);
+        const subRef = doc(db, 'organizations', organizationId, 'subscriptions', subscription.id);
         await updateDoc(subRef, updates);
 
         // Log state change
@@ -309,7 +308,7 @@ export const billingService = {
         const subscription = await this.getSubscription(organizationId);
         if (!subscription) throw new Error('Subscription not found');
 
-        const subRef = doc(db, 'subscriptions', subscription.id);
+        const subRef = doc(db, 'organizations', organizationId, 'subscriptions', subscription.id);
         await updateDoc(subRef, {
             paymentMode: mode,
             autoPayEnabled: mode === 'AUTO_PAY',
@@ -327,7 +326,7 @@ export const billingService = {
         const subscription = await this.getSubscription(organizationId);
         if (!subscription) throw new Error('Subscription not found');
 
-        const subRef = doc(db, 'subscriptions', subscription.id);
+        const subRef = doc(db, 'organizations', organizationId, 'subscriptions', subscription.id);
         await updateDoc(subRef, {
             plan: newPlan,
             amountCents: getPlanAmountCents(newPlan),
@@ -474,7 +473,7 @@ export const billingService = {
         });
 
         // Update subscription
-        const subRef = doc(db, 'subscriptions', subscription.id);
+        const subRef = doc(db, 'organizations', organizationId, 'subscriptions', subscription.id);
         await updateDoc(subRef, {
             billingState: 'ACTIVE',
             status: 'Active',
@@ -695,7 +694,7 @@ export const billingService = {
             const trialEnd = new Date(now);
             trialEnd.setDate(trialEnd.getDate() + BILLING_CONFIG.TRIAL_DAYS);
 
-            const subRef = doc(db, 'subscriptions', subscription.id);
+            const subRef = doc(db, 'organizations', organizationId, 'subscriptions', subscription.id);
             await updateDoc(subRef, {
                 billingState: 'TRIAL',
                 status: 'Trial',

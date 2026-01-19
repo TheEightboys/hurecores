@@ -39,15 +39,17 @@ export const auditService = {
         try {
             // Build query with filters
             let q = query(
-                collections.orgAuditLogs(organizationId),
-                orderBy('timestamp', 'desc')
+                collections.orgAuditLogs(organizationId)
+                // orderBy('timestamp', 'desc') // Temporarily removed to avoid index issues
             );
 
             const snapshot = await getDocs(q);
             let logs = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
-            } as AuditLogEntry));
+            } as AuditLogEntry)).sort((a, b) =>
+                new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            );
 
             // Apply client-side filters if needed
             if (options?.startDate) {
