@@ -439,6 +439,42 @@ const LeaveManager: React.FC = () => {
 
 // Leave Policies Tab Component
 const LeavePoliciesTab: React.FC<{ leaveTypes: LeaveType[]; onRefresh: () => void }> = ({ leaveTypes, onRefresh }) => {
+    const { user } = useAuth();
+    const [loading, setLoading] = useState(false);
+
+    const handleInitializeDefaults = async () => {
+        if (!user?.organizationId) return;
+
+        const confirmed = window.confirm(
+            '📋 Initialize Default Leave Types\n\n' +
+            'This will create 9 Kenya-standard leave types:\n' +
+            '• Annual Leave (21 days)\n' +
+            '• Sick Leave - Paid (14 days)\n' +
+            '• Sick Leave - Unpaid (Unlimited)\n' +
+            '• Maternity Leave (90 days)\n' +
+            '• Paternity Leave (14 days)\n' +
+            '• Compassionate Leave (5 days)\n' +
+            '• Study Leave (10 days)\n' +
+            '• Unpaid Leave (Unlimited)\n' +
+            '• Comp Off (10 days)\n\n' +
+            'Continue?'
+        );
+
+        if (!confirmed) return;
+
+        setLoading(true);
+        try {
+            await leaveService.createDefaultLeaveTypes(user.organizationId);
+            alert('✅ Default leave types created successfully!');
+            onRefresh();
+        } catch (error) {
+            console.error('Error creating default leave types:', error);
+            alert('❌ Error creating leave types. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -448,34 +484,53 @@ const LeavePoliciesTab: React.FC<{ leaveTypes: LeaveType[]; onRefresh: () => voi
                 </p>
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-                <table className="w-full">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                        <tr>
-                            <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Leave Type</th>
-                            <th className="text-center px-6 py-4 text-sm font-semibold text-slate-600">Days/Year</th>
-                            <th className="text-center px-6 py-4 text-sm font-semibold text-slate-600">Paid</th>
-                            <th className="text-center px-6 py-4 text-sm font-semibold text-slate-600">Approval</th>
-                            <th className="text-center px-6 py-4 text-sm font-semibold text-slate-600">Document</th>
-                            <th className="text-center px-6 py-4 text-sm font-semibold text-slate-600">Carry Forward</th>
-                            <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Notes</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {leaveTypes.map(lt => (
-                            <tr key={lt.id} className="hover:bg-slate-50">
-                                <td className="px-6 py-4 font-medium text-slate-900">{lt.name}</td>
-                                <td className="px-6 py-4 text-center">{lt.daysAllowed === 999 ? 'Unlimited' : lt.daysAllowed}</td>
-                                <td className="px-6 py-4 text-center">{lt.isPaid ? <span className="text-emerald-600">✓</span> : <span className="text-slate-400">✗</span>}</td>
-                                <td className="px-6 py-4 text-center">{lt.requiresApproval ? <span className="text-blue-600">✓</span> : <span className="text-slate-400">✗</span>}</td>
-                                <td className="px-6 py-4 text-center">{lt.requiresDocument ? <span className="text-amber-600">✓</span> : <span className="text-slate-400">✗</span>}</td>
-                                <td className="px-6 py-4 text-center">{lt.carryForwardAllowed ? <span className="text-purple-600">✓</span> : <span className="text-slate-400">✗</span>}</td>
-                                <td className="px-6 py-4 text-sm text-slate-500">{lt.notes || '-'}</td>
+            {leaveTypes.length === 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
+                    <div className="text-4xl mb-4">📋</div>
+                    <h3 className="text-lg font-bold text-slate-900 mb-2">No Leave Types Configured</h3>
+                    <p className="text-slate-600 mb-4">
+                        Initialize Kenya-standard leave types to get started with leave management.
+                    </p>
+                    <button
+                        onClick={handleInitializeDefaults}
+                        disabled={loading}
+                        className="bg-[#0f766e] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#0d9488] disabled:bg-slate-400 transition-colors"
+                    >
+                        {loading ? 'Creating...' : '📝 Initialize Default Leave Types'}
+                    </button>
+                </div>
+            )}
+
+            {leaveTypes.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <table className="w-full">
+                        <thead className="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Leave Type</th>
+                                <th className="text-center px-6 py-4 text-sm font-semibold text-slate-600">Days/Year</th>
+                                <th className="text-center px-6 py-4 text-sm font-semibold text-slate-600">Paid</th>
+                                <th className="text-center px-6 py-4 text-sm font-semibold text-slate-600">Approval</th>
+                                <th className="text-center px-6 py-4 text-sm font-semibold text-slate-600">Document</th>
+                                <th className="text-center px-6 py-4 text-sm font-semibold text-slate-600">Carry Forward</th>
+                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-600">Notes</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {leaveTypes.map(lt => (
+                                <tr key={lt.id} className="hover:bg-slate-50">
+                                    <td className="px-6 py-4 font-medium text-slate-900">{lt.name}</td>
+                                    <td className="px-6 py-4 text-center">{lt.daysAllowed === 999 ? 'Unlimited' : lt.daysAllowed}</td>
+                                    <td className="px-6 py-4 text-center">{lt.isPaid ? <span className="text-emerald-600">✓</span> : <span className="text-slate-400">✗</span>}</td>
+                                    <td className="px-6 py-4 text-center">{lt.requiresApproval ? <span className="text-blue-600">✓</span> : <span className="text-slate-400">✗</span>}</td>
+                                    <td className="px-6 py-4 text-center">{lt.requiresDocument ? <span className="text-amber-600">✓</span> : <span className="text-slate-400">✗</span>}</td>
+                                    <td className="px-6 py-4 text-center">{lt.carryForwardAllowed ? <span className="text-purple-600">✓</span> : <span className="text-slate-400">✗</span>}</td>
+                                    <td className="px-6 py-4 text-sm text-slate-500">{lt.notes || '-'}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </div>
     );
 };

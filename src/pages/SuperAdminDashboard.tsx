@@ -8,6 +8,7 @@ import OrganizationsManager from '../components/admin/OrganizationsManager';
 import BillingManager from '../components/admin/BillingManager';
 import AuditLogManager from '../components/admin/AuditLogManager';
 import SettingsManager from '../components/admin/SettingsManager';
+import StatutoryRulesManager from '../components/admin/StatutoryRulesManager';
 
 // Types
 interface Organization {
@@ -73,7 +74,7 @@ const SuperAdminDashboard: React.FC = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'organizations' | 'billing' | 'audit' | 'settings'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'organizations' | 'billing' | 'statutory' | 'audit' | 'settings'>('overview');
 
     // Data
     const [stats, setStats] = useState({
@@ -233,6 +234,7 @@ const SuperAdminDashboard: React.FC = () => {
         { id: 'approvals', label: '✅ Approvals', badge: stats.pendingOnboarding },
         { id: 'organizations', label: '🏢 Organizations', badge: 0 },
         { id: 'billing', label: '💳 Billing', badge: 0 },
+        { id: 'statutory', label: '📜 Statutory Rules', badge: 0 },
         { id: 'audit', label: '📋 Audit Log', badge: 0 },
         { id: 'settings', label: '⚙️ Settings', badge: 0 }
     ];
@@ -306,6 +308,7 @@ const SuperAdminDashboard: React.FC = () => {
                             {activeTab === 'approvals' && 'Approvals'}
                             {activeTab === 'organizations' && 'Organizations'}
                             {activeTab === 'billing' && 'Billing'}
+                            {activeTab === 'statutory' && 'Statutory Payroll Rules'}
                             {activeTab === 'audit' && 'Audit Log'}
                             {activeTab === 'settings' && 'Settings'}
                         </h2>
@@ -314,9 +317,11 @@ const SuperAdminDashboard: React.FC = () => {
                                 ? 'Verify organizations and facilities before enabling platform access.'
                                 : activeTab === 'organizations'
                                     ? 'Manage approved organizations, view facilities, and control platform access.'
-                                    : activeTab === 'billing'
-                                        ? 'Welcome back, Super Admin.'
-                                        : 'Welcome back, Super Admin.'}
+                                    : activeTab === 'statutory'
+                                        ? 'Manage Kenya statutory tax and deduction rates for payroll calculations.'
+                                        : activeTab === 'billing'
+                                            ? 'Welcome back, Super Admin.'
+                                            : 'Welcome back, Super Admin.'}
                         </p>
                     </div>
                     <div className="flex items-center gap-4">
@@ -515,6 +520,9 @@ const SuperAdminDashboard: React.FC = () => {
 
                 {/* Billing Tab */}
                 {activeTab === 'billing' && <BillingManager />}
+
+                {/* Statutory Rules Tab */}
+                {activeTab === 'statutory' && <StatutoryRulesManager />}
 
                 {/* Audit Log Tab */}
                 {activeTab === 'audit' && <AuditLogManager />}

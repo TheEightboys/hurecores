@@ -253,5 +253,13 @@ service cloud.firestore {
       allow read: if isSuperAdmin() || (isAuthenticated() && hasProfile() && resource.data.organizationId == getUserData().organizationId);
       allow update, delete: if false; 
     }
+    
+    // Statutory Rules (Kenya payroll tax/deduction rates)
+    match /statutoryRules/{ruleId} {
+      // All authenticated users can read (needed for payroll calculations)
+      allow read: if isAuthenticated();
+      // Only Super Admin can create/update rules
+      allow write: if isSuperAdmin();
+    }
   }
 }

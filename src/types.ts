@@ -798,11 +798,63 @@ export interface CreateShiftInput {
   notes?: string;
 }
 
-export interface CreateLeaveRequestInput {
-  leaveTypeId: string;
+export interface CreateScheduleInput {
+  locationId: string;
   startDate: string;
   endDate: string;
-  reason?: string;
+  shifts: CreateShiftInput[];
+}
+
+// =====================================================
+// STATUTORY PAYROLL RULES (Kenya)
+// =====================================================
+
+export interface PAYEBand {
+  threshold: number;        // Annual threshold in KES
+  rate: number;            // Tax rate as decimal (0.10 = 10%)
+  label: string;           // Display label (e.g., "First 288,000")
+}
+
+export interface StatutoryRules {
+  id: string;
+  country: 'Kenya';
+  effectiveFrom: string;   // ISO date
+  effectiveUntil?: string; // ISO date (null if current)
+  version: number;
+  isActive: boolean;
+
+  // PAYE (Income Tax)
+  payeBands: PAYEBand[];
+
+  // NSSF (National Social Security Fund)
+  nssfEmployeeRate: number;    // as decimal (0.06 = 6%)
+  nssfEmployerRate: number;    // as decimal (0.06 = 6%)
+  nssfCap?: number;            // Optional cap amount
+
+  // NHDF (National Housing Development Fund)
+  nhdfRate: number;            // as decimal (0.015 = 1.5%)
+
+  // SHA (Social Health Authority)
+  shaRate: number;             // as decimal (0.0275 = 2.75%)
+
+  // Metadata
+  updatedBy: string;           // Super Admin user ID
+  updatedByEmail?: string;
+  updatedAt: string;
+  notes?: string;
+}
+
+export interface DeductionPreview {
+  grossPay: number;
+  taxablePay: number;
+  paye: number;
+  nssfEmployee: number;
+  nssfEmployer: number;
+  nhdf: number;
+  sha: number;
+  totalEmployeeDeductions: number;
+  netPay: number;
+  employerCost: number;       // Gross + NSSF employer
 }
 
 export interface UpdateAttendanceInput {

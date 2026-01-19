@@ -39,6 +39,7 @@ const PayrollView: React.FC = () => {
     const [success, setSuccess] = useState('');
     const [activeTab, setActiveTab] = useState<'employees' | 'locums'>('employees');
     const [showArchived, setShowArchived] = useState(false);
+    const [showSalaries, setShowSalaries] = useState(true); // Toggle to hide/show salary information
 
     const [newPeriod, setNewPeriod] = useState({
         name: '',
@@ -398,6 +399,7 @@ const PayrollView: React.FC = () => {
     };
 
     const formatCurrency = (cents: number) => {
+        if (!showSalaries) return 'KES •••';
         return `KES ${(cents / 100).toLocaleString()}`;
     };
 
@@ -427,12 +429,22 @@ const PayrollView: React.FC = () => {
                         Locums auto-filter by pay period range; payable amount is only for <span className="font-semibold text-emerald-600">Worked</span>.
                     </p>
                 </div>
-                <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700"
-                >
-                    + Create Period
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setShowSalaries(!showSalaries)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors font-medium"
+                        title={showSalaries ? "Hide salary amounts" : "Show salary amounts"}
+                    >
+                        <span className="text-lg">{showSalaries ? '👁️' : '👁️‍🗨️'}</span>
+                        <span className="text-sm">{showSalaries ? 'Hide Salaries' : 'Show Salaries'}</span>
+                    </button>
+                    <button
+                        onClick={() => setShowCreateModal(true)}
+                        className="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700"
+                    >
+                        + Create Period
+                    </button>
+                </div>
             </div>
 
             {/* Payroll Rules Banner */}
@@ -674,19 +686,19 @@ const PayrollView: React.FC = () => {
                                                                 {(entry.workedUnits + entry.paidLeaveUnits) || 0} / {entry.monthUnits || 30}
                                                             </td>
                                                             <td className="px-4 py-4 text-right text-slate-600">
-                                                                {((entry.staff?.monthlySalaryCents || 0) / 100).toLocaleString()}
+                                                                {showSalaries ? ((entry.staff?.monthlySalaryCents || 0) / 100).toLocaleString() : '•••'}
                                                             </td>
                                                             <td className="px-4 py-4 text-center">
                                                                 {getPayMethodBadge(entry.payMethod)}
                                                             </td>
                                                             <td className="px-4 py-4 text-right text-slate-600">
-                                                                {((entry.payableBaseCents) / 100).toLocaleString()}
+                                                                {showSalaries ? ((entry.payableBaseCents) / 100).toLocaleString() : '•••'}
                                                             </td>
                                                             <td className="px-4 py-4 text-right text-slate-600">
-                                                                {((entry.allowancesTotalCents || 0) / 100).toLocaleString()}
+                                                                {showSalaries ? ((entry.allowancesTotalCents || 0) / 100).toLocaleString() : '•••'}
                                                             </td>
                                                             <td className="px-4 py-4 text-right font-bold text-slate-900">
-                                                                {(((entry.payableBaseCents || 0) + (entry.allowancesTotalCents || 0)) / 100).toLocaleString()}
+                                                                {showSalaries ? (((entry.payableBaseCents || 0) + (entry.allowancesTotalCents || 0)) / 100).toLocaleString() : '•••'}
                                                             </td>
                                                             <td className="px-4 py-4 text-center">
                                                                 {selectedPeriod.isFinalized ? (

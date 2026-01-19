@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { attendanceService, scheduleService, settingsService, policyDocumentsService, organizationService } from '../../lib/services';
 import type { AttendanceRecord, Shift, OrganizationSettings, PolicyDocument, Organization, Location } from '../../types';
 
 const TodayMyWork: React.FC = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [organization, setOrganization] = useState<Organization | null>(null);
     const [location, setLocation] = useState<Location | null>(null);
@@ -187,18 +189,31 @@ const TodayMyWork: React.FC = () => {
         return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     };
 
-    // Get day abbreviation
-    const getDayAbbrev = (offset: number) => {
-        const date = new Date();
-        date.setDate(date.getDate() + offset);
+    // Get day abbreviation for week view (Sun-Sat)
+    const getDayAbbrev = (dayIndex: number) => {
+        const today = new Date();
+        const currentDay = today.getDay(); // 0 = Sunday, 6 = Saturday
+        const daysFromSunday = dayIndex; // 0-6 for Sun-Sat
+        const offset = daysFromSunday - currentDay;
+        const date = new Date(today);
+        date.setDate(today.getDate() + offset);
         return date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 3);
     };
 
-    // Get day number
-    const getDayNum = (offset: number) => {
-        const date = new Date();
-        date.setDate(date.getDate() + offset);
+    // Get day number for week view (Sun-Sat)
+    const getDayNum = (dayIndex: number) => {
+        const today = new Date();
+        const currentDay = today.getDay(); // 0 = Sunday, 6 = Saturday
+        const daysFromSunday = dayIndex; // 0-6 for Sun-Sat
+        const offset = daysFromSunday - currentDay;
+        const date = new Date(today);
+        date.setDate(today.getDate() + offset);
         return date.getDate();
+    };
+
+    // Check if a day index is today
+    const isToday = (dayIndex: number) => {
+        return dayIndex === new Date().getDay();
     };
 
     if (loading) {
@@ -331,9 +346,12 @@ const TodayMyWork: React.FC = () => {
 
                         {/* View This Week Link */}
                         <div className="mt-4 pt-4 border-t border-slate-100">
-                            <a href="#/employee/schedule" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                            <button
+                                onClick={() => navigate('/employee/schedule')}
+                                className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                            >
                                 View This Week →
-                            </a>
+                            </button>
                         </div>
                     </div>
 
@@ -374,21 +392,26 @@ const TodayMyWork: React.FC = () => {
                     {/* Mini Calendar */}
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
                         <div className="flex items-center justify-between mb-4">
-                            <span className="text-sm font-medium text-blue-600">View This Week</span>
+                            <button
+                                onClick={() => navigate('/employee/schedule')}
+                                className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                            >
+                                View This Week
+                            </button>
                             <span className="text-sm text-slate-400">All locations</span>
                         </div>
 
-                        {/* Week Days */}
+                        {/* Week Days - Sunday to Saturday */}
                         <div className="grid grid-cols-7 gap-1 mb-4">
-                            {[-3, -2, -1, 0, 1, 2, 3].map((offset) => {
-                                const isToday = offset === 0;
+                            {[0, 1, 2, 3, 4, 5, 6].map((dayIndex) => {
+                                const isTodayDay = isToday(dayIndex);
                                 return (
                                     <div
-                                        key={offset}
-                                        className={`text-center py-2 rounded-lg ${isToday ? 'bg-blue-600 text-white' : 'text-slate-600'}`}
+                                        key={dayIndex}
+                                        className={`text-center py-2 rounded-lg ${isTodayDay ? 'bg-blue-600 text-white' : 'text-slate-600'}`}
                                     >
-                                        <div className="text-xs font-medium">{getDayAbbrev(offset)}</div>
-                                        <div className={`text-lg font-bold ${isToday ? 'text-white' : 'text-slate-900'}`}>{getDayNum(offset)}</div>
+                                        <div className="text-xs font-medium">{getDayAbbrev(dayIndex)}</div>
+                                        <div className={`text-lg font-bold ${isTodayDay ? 'text-white' : 'text-slate-900'}`}>{getDayNum(dayIndex)}</div>
                                     </div>
                                 );
                             })}
@@ -421,9 +444,12 @@ const TodayMyWork: React.FC = () => {
                         </div>
 
                         <div className="mt-4 pt-4 border-t border-slate-100">
-                            <a href="#/employee/schedule" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                            <button
+                                onClick={() => navigate('/employee/schedule')}
+                                className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                            >
                                 View All Communications →
-                            </a>
+                            </button>
                         </div>
                     </div>
                 </div>

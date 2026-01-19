@@ -40,14 +40,22 @@ const OrgDetails: React.FC = () => {
 
         setLoading(true);
         try {
-            const [orgData, locationsData, subData] = await Promise.all([
+            const [orgData, locationsData] = await Promise.all([
                 organizationService.getById(user.organizationId),
-                organizationService.getLocations(user.organizationId),
-                organizationService.getSubscription(user.organizationId)
+                organizationService.getLocations(user.organizationId)
             ]);
+
             setOrg(orgData);
             setLocations(locationsData);
-            setSubscription(subData);
+
+            // Try to get subscription, but don't fail if permissions are insufficient
+            try {
+                const subData = await organizationService.getSubscription(user.organizationId);
+                setSubscription(subData);
+            } catch (subError) {
+                console.log('Subscription data not available (may require admin access)');
+                setSubscription(null);
+            }
 
             if (orgData) {
                 setOrgForm({
@@ -211,8 +219,18 @@ const OrgDetails: React.FC = () => {
         );
     }
 
-    const subStatus = getSubscriptionStatus();
-    const orgStatus = getOrgStatusLabel(org?.orgStatus || 'Unverified');
+    if (!org) {
+        return (
+            <div className="p-8">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 text-center">
+                    <p className="text-slate-600">Unable to load organization details.</p>
+                </div>
+            </div>
+        );
+    }
+
+    const subStatus = subscription ? getSubscriptionStatus() : { label: 'Trial', color: 'bg-blue-100 text-blue-700' };
+    const orgStatus = org?.orgStatus ? getOrgStatusLabel(org.orgStatus) : { label: 'Not Verified', color: 'bg-slate-100 text-slate-600' };
 
     return (
         <div className="p-8 max-w-7xl mx-auto space-y-8">
@@ -223,8 +241,8 @@ const OrgDetails: React.FC = () => {
                     <p className="text-slate-500 mt-1">{org?.name}</p>
                 </div>
                 <div className="flex items-center space-x-3">
-                    <span className={`px-3 py-1.5 rounded-lg text-sm font-bold ${subStatus.color}`}>
-                        {subStatus.label}
+                    <span className={`px-3 py-1.5 rounded-lg text-sm font-bold ${subStatus?.color || 'bg-blue-100 text-blue-700'}`}>
+                        {subStatus?.label || 'Trial'}
                     </span>
                 </div>
             </div>
@@ -283,8 +301,8 @@ const OrgDetails: React.FC = () => {
                             <h3 className="text-lg font-bold text-slate-900">Organization Verification</h3>
                             <p className="text-sm text-slate-500 mt-1">Global business credentials</p>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${orgStatus.color}`}>
-                            {orgStatus.label}
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${orgStatus?.color || 'bg-slate-100 text-slate-600'}`}>
+                            {orgStatus?.label || 'Not Verified'}
                         </span>
                     </div>
 
@@ -433,8 +451,8 @@ const OrgDetails: React.FC = () => {
                                         </div>
 
                                         <div className="flex flex-col items-end space-y-2">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${facilityStatus.color}`}>
-                                                {facilityStatus.status}
+                                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${facilityStatus?.color || 'bg-slate-100 text-slate-600'}`}>
+                                                {facilityStatus?.status || 'Draft'}
                                             </span>
                                             <button
                                                 onClick={() => openFacilityModal(location)}

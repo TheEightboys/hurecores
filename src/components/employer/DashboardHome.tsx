@@ -139,7 +139,7 @@ const DashboardHome: React.FC = () => {
                             e.preventDefault();
                             window.location.hash = '/employer/verification';
                         }}
-                        className={`px-6 py-2.5 rounded-xl font-bold transition-colors text-white ${org.orgStatus === 'Rejected' ? 'bg-red-500 hover:bg-red-600' : 'bg-amber-500 hover:bg-amber-600'
+                        className={`px-6 py-2.5 rounded-xl font-bold transition-colors text-white ${org.orgStatus === 'Rejected' ? 'bg-red-500 hover:bg-red-600' : 'bg-[#0f766e] hover:bg-[#0d9488]'
                             }`}
                     >
                         {org.orgStatus === 'Rejected' ? 'Resubmit' : 'Verify Now'}
