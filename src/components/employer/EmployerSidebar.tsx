@@ -24,6 +24,7 @@ const EmployerSidebar: React.FC<EmployerSidebarProps> = ({ isOpen, setIsOpen, us
             title: 'Finance',
             items: [
                 { name: 'Payroll (export)', icon: NAVIGATION_ICONS.Payroll, path: '/employer/payroll' },
+                { name: 'Reports', icon: '📊', path: '/employer/reports' },
             ]
         },
         {

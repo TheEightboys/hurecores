@@ -367,7 +367,7 @@ const OrgDetails: React.FC = () => {
                             className="w-full px-6 py-3 bg-[#1a2e35] text-[#4fd1c5] rounded-xl font-bold hover:bg-[#152428] disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-colors"
                         >
                             {org?.orgStatus === 'Verified' ? '✓ Verified' :
-                                org?.orgStatus === 'Pending' ? 'Update Verification' : 'Submit for Verification'}
+                                org?.orgStatus === 'Pending' ? 'Submit for Review' : 'Submit for Verification'}
                         </button>
                     </form>
 

@@ -207,6 +207,8 @@ const ApprovalsManager: React.FC = () => {
             await logAuditEvent('Organization Approved', org.id, org.name);
             await loadData();
             setSelectedOrg(null);
+            // Reset filter to 'All' so user can see the approved org in the list
+            setStatusFilter('All');
         } catch (error) {
             console.error('Error approving organization:', error);
             alert('Failed to approve organization');
@@ -511,8 +513,8 @@ const ApprovalsManager: React.FC = () => {
                     <button
                         onClick={() => { setActiveSubTab('organizations'); setStatusFilter('Pending Review'); }}
                         className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${activeSubTab === 'organizations'
-                                ? 'bg-blue-600 text-white shadow-lg'
-                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                            ? 'bg-blue-600 text-white shadow-lg'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                             }`}
                     >
                         Organizations
@@ -523,8 +525,8 @@ const ApprovalsManager: React.FC = () => {
                     <button
                         onClick={() => { setActiveSubTab('facilities'); setStatusFilter('Pending Review'); }}
                         className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${activeSubTab === 'facilities'
-                                ? 'bg-blue-600 text-white shadow-lg'
-                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                            ? 'bg-blue-600 text-white shadow-lg'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                             }`}
                     >
                         Facilities

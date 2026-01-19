@@ -18,6 +18,7 @@ import SettingsView from '../components/employer/SettingsView';
 import SettingsRulesView from '../components/employer/SettingsRulesView';
 import DocumentsPoliciesManager from '../components/employer/DocumentsPoliciesManager';
 import AuditLogView from '../components/employer/AuditLogView';
+import ReportsView from '../components/employer/ReportsView';
 
 import { organizationService } from '../lib/services/organization.service';
 import type { Organization, Location } from '../types';
@@ -132,13 +133,18 @@ const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ user }) => {
                 <LeaveManager />
               </SubscriptionGuard>
             } />
-            <Route path="/organization" element={
+            <Route path="/reports" element={
               <SubscriptionGuard>
+                <ReportsView />
+              </SubscriptionGuard>
+            } />
+            <Route path="/organization" element={
+              <SubscriptionGuard allowVerificationAccess={true}>
                 <OrgDetails />
               </SubscriptionGuard>
             } />
             <Route path="/verification" element={
-              <SubscriptionGuard>
+              <SubscriptionGuard allowVerificationAccess={true}>
                 <OrgDetails />
               </SubscriptionGuard>
             } />

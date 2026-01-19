@@ -410,8 +410,8 @@ const BillingManager: React.FC = () => {
                 <button
                     onClick={() => setBillingTab('overview')}
                     className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all ${billingTab === 'overview'
-                            ? 'bg-blue-600 text-white shadow-lg'
-                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                         }`}
                 >
                     Overview
@@ -419,8 +419,8 @@ const BillingManager: React.FC = () => {
                 <button
                     onClick={() => setBillingTab('subscriptions')}
                     className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all ${billingTab === 'subscriptions'
-                            ? 'bg-blue-600 text-white shadow-lg'
-                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                         }`}
                 >
                     Subscriptions
@@ -428,8 +428,8 @@ const BillingManager: React.FC = () => {
                 <button
                     onClick={() => setBillingTab('pricing')}
                     className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all ${billingTab === 'pricing'
-                            ? 'bg-blue-600 text-white shadow-lg'
-                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                         }`}
                 >
                     Pricing & Plans
@@ -449,7 +449,7 @@ const BillingManager: React.FC = () => {
                                 className="bg-white p-6 rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all text-left group"
                             >
                                 <div className="text-sm font-medium text-slate-500 mb-2">Total MRR</div>
-                                <div className="text-3xl font-bold text-blue-600">{formatCurrency(metrics.totalMRR)}</div>
+                                <div className="text-4xl font-bold text-blue-600">{formatCurrency(metrics.totalMRR)}</div>
                                 <div className="text-xs text-slate-500 mt-2">Monthly recurring revenue</div>
                                 <div className="text-xs font-semibold text-blue-600 mt-3 group-hover:underline">View more →</div>
                             </button>
@@ -460,7 +460,7 @@ const BillingManager: React.FC = () => {
                                 className="bg-white p-6 rounded-2xl border border-slate-200 hover:border-emerald-300 hover:shadow-lg transition-all text-left group"
                             >
                                 <div className="text-sm font-medium text-slate-500 mb-2">Revenue This Month</div>
-                                <div className="text-3xl font-bold text-emerald-600">{formatCurrency(metrics.revenueThisMonth)}</div>
+                                <div className="text-4xl font-bold text-emerald-600">{formatCurrency(metrics.revenueThisMonth)}</div>
                                 <div className="text-xs text-slate-500 mt-2">Total revenue collected this month</div>
                                 <div className="text-xs font-semibold text-emerald-600 mt-3 group-hover:underline">View more →</div>
                             </button>
@@ -471,7 +471,7 @@ const BillingManager: React.FC = () => {
                                 className="bg-white p-6 rounded-2xl border border-slate-200 hover:border-red-300 hover:shadow-lg transition-all text-left group"
                             >
                                 <div className="text-sm font-medium text-slate-500 mb-2">Suspended (Unpaid)</div>
-                                <div className="text-3xl font-bold text-red-600">{formatCurrency(metrics.suspendedAmount)}</div>
+                                <div className="text-4xl font-bold text-red-600">{formatCurrency(metrics.suspendedAmount)}</div>
                                 <div className="text-xs text-slate-500 mt-2">Restricted due to non-payment</div>
                                 <div className="flex justify-between items-center mt-3">
                                     <span className="text-xs font-semibold text-red-600 group-hover:underline">View more →</span>
@@ -491,7 +491,7 @@ const BillingManager: React.FC = () => {
                                 className="bg-white p-6 rounded-2xl border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all text-left group"
                             >
                                 <div className="text-sm font-medium text-slate-500 mb-2">Essential Plan</div>
-                                <div className="text-3xl font-bold text-slate-800">
+                                <div className="text-4xl font-bold text-slate-800">
                                     {formatCurrency(pricing.essential)}<span className="text-sm font-normal text-slate-400">/mo</span>
                                 </div>
                                 <div className="flex justify-between items-center mt-4 text-sm">
@@ -511,7 +511,7 @@ const BillingManager: React.FC = () => {
                                 className="bg-white p-6 rounded-2xl border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all text-left group"
                             >
                                 <div className="text-sm font-medium text-slate-500 mb-2">Professional Plan</div>
-                                <div className="text-3xl font-bold text-slate-800">
+                                <div className="text-4xl font-bold text-slate-800">
                                     {formatCurrency(pricing.professional)}<span className="text-sm font-normal text-slate-400">/mo</span>
                                 </div>
                                 <div className="flex justify-between items-center mt-4 text-sm">
@@ -531,7 +531,7 @@ const BillingManager: React.FC = () => {
                                 className="bg-white p-6 rounded-2xl border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all text-left group"
                             >
                                 <div className="text-sm font-medium text-slate-500 mb-2">Enterprise Plan</div>
-                                <div className="text-3xl font-bold text-slate-800">
+                                <div className="text-4xl font-bold text-slate-800">
                                     {formatCurrency(pricing.enterprise)}<span className="text-sm font-normal text-slate-400">/mo</span>
                                 </div>
                                 <div className="flex justify-between items-center mt-4 text-sm">
@@ -562,8 +562,8 @@ const BillingManager: React.FC = () => {
                                 <div className="space-y-3">
                                     {alerts.map(alert => (
                                         <div key={alert.id} className={`p-4 rounded-xl ${alert.type === 'suspended' ? 'bg-red-50 border border-red-100' :
-                                                alert.type === 'trial_expiring' ? 'bg-amber-50 border border-amber-100' :
-                                                    'bg-slate-50 border border-slate-100'
+                                            alert.type === 'trial_expiring' ? 'bg-amber-50 border border-amber-100' :
+                                                'bg-slate-50 border border-slate-100'
                                             }`}>
                                             <div className="flex items-center gap-3">
                                                 <span className="text-xl">

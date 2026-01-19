@@ -14,6 +14,7 @@ import {
 import { auth } from '../firebase';
 import type { AttendanceRecord, AttendanceStatus, Profile } from '../../types';
 import { staffService } from './staff.service';
+import { getTodayDateKE, getDateStringKE } from '../utils/dateFormat';
 
 // =====================================================
 // ATTENDANCE SERVICE
@@ -78,10 +79,10 @@ export const attendanceService = {
   },
 
   /**
-   * Get today's attendance
+   * Get today's attendance (using Kenya timezone)
    */
   async getToday(organizationId: string, locationId?: string): Promise<AttendanceRecord[]> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayDateKE(); // Use Kenya timezone
     return this.getAll(organizationId, { startDate: today, endDate: today, locationId });
   },
 
@@ -136,11 +137,11 @@ export const attendanceService = {
   },
 
   /**
-   * Clock in
+   * Clock in (using Kenya timezone for date)
    */
   async clockIn(organizationId: string, staffId: string, locationId?: string, shiftId?: string): Promise<AttendanceRecord> {
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
+    const today = getTodayDateKE(); // Use Kenya timezone for date
     const clockInTime = now.toISOString();
 
     // Check if already clocked in today
@@ -159,7 +160,7 @@ export const attendanceService = {
       staffId,
       locationId: locationId || null,
       shiftId: shiftId || null,
-      date: today,
+      date: today, // Kenya date
       clockIn: clockInTime,
       clockOut: null,
       totalHours: 0,

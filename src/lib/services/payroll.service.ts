@@ -22,6 +22,7 @@ import type {
 import { staffService } from './staff.service';
 import { attendanceService } from './attendance.service';
 import { leaveService } from './leave.service';
+import { auditService } from './audit.service';
 
 // =====================================================
 // PAYROLL SERVICE
@@ -271,11 +272,23 @@ export const payrollService = {
    * Finalize payroll period
    */
   async finalizePeriod(organizationId: string, periodId: string): Promise<void> {
+    const period = await this.getPeriodById(organizationId, periodId);
+
     await updateDoc(docs.payrollPeriod(organizationId, periodId), {
       isFinalized: true,
       finalizedAt: new Date().toISOString(),
       finalizedBy: auth.currentUser?.uid,
       updatedAt: serverTimestamp()
+    });
+
+    // Log to organization audit trail
+    await auditService.logAction(organizationId, 'Payroll Finalized', 'Payroll', {
+      entityId: periodId,
+      entityName: period?.name || `Period ${periodId}`,
+      details: {
+        periodStart: period?.startDate,
+        periodEnd: period?.endDate
+      }
     });
   },
 
@@ -347,5 +360,40 @@ export const payrollService = {
       paidCount,
       pendingCount
     };
+  },
+
+  /**
+   * Archive a finalized payroll period
+   */
+  async archivePeriod(organizationId: string, periodId: string): Promise<void> {
+    const period = await this.getPeriodById(organizationId, periodId);
+    if (!period) throw new Error('Payroll period not found');
+    if (!period.isFinalized) throw new Error('Cannot archive unfinalized payroll. Finalize first.');
+
+    await updateDoc(docs.payrollPeriod(organizationId, periodId), {
+      isArchived: true,
+      archivedAt: new Date().toISOString(),
+      archivedBy: auth.currentUser?.uid,
+      updatedAt: serverTimestamp()
+    });
+
+    // Log to audit trail
+    await auditService.logAction(organizationId, 'Payroll Archived', 'Payroll', {
+      entityId: periodId,
+      entityName: period.name,
+      details: { periodStart: period.startDate, periodEnd: period.endDate }
+    });
+  },
+
+  /**
+   * Unarchive a payroll period
+   */
+  async unarchivePeriod(organizationId: string, periodId: string): Promise<void> {
+    await updateDoc(docs.payrollPeriod(organizationId, periodId), {
+      isArchived: false,
+      archivedAt: null,
+      archivedBy: null,
+      updatedAt: serverTimestamp()
+    });
   }
 };

@@ -149,18 +149,27 @@ const DashboardHome: React.FC = () => {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
+                {/* Total Staff - Click to go to Staff page */}
+                <button
+                    onClick={() => window.location.hash = '/employer/staff'}
+                    className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm hover:shadow-lg hover:border-[#2FB7A3] transition-all cursor-pointer text-left group"
+                >
                     <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 rounded-xl bg-[#F1F5F9] text-[#64748B] text-2xl">👥</div>
+                        <div className="p-3 rounded-xl bg-[#F1F5F9] text-[#64748B] text-2xl group-hover:bg-[#2FB7A3]/10 transition-colors">👥</div>
                     </div>
                     <div className="text-3xl font-bold text-[#0F172A] mb-1">{stats?.totalStaff || 0}</div>
                     <div className="text-sm font-semibold text-[#475569]">Total Staff</div>
                     <div className="text-xs text-[#94A3B8] mt-1">of {stats?.maxStaff || 0} allowed</div>
-                </div>
+                    <div className="text-xs font-semibold text-[#2FB7A3] mt-3 opacity-0 group-hover:opacity-100 transition-opacity">View Staff →</div>
+                </button>
 
-                <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
+                {/* Today's Shifts - Click to go to Schedule page */}
+                <button
+                    onClick={() => window.location.hash = '/employer/schedule'}
+                    className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm hover:shadow-lg hover:border-[#2FB7A3] transition-all cursor-pointer text-left group"
+                >
                     <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 rounded-xl bg-[#F1F5F9] text-[#64748B] text-2xl">📅</div>
+                        <div className="p-3 rounded-xl bg-[#F1F5F9] text-[#64748B] text-2xl group-hover:bg-[#2FB7A3]/10 transition-colors">📅</div>
                     </div>
                     <div className="text-3xl font-bold text-[#0F172A] mb-1">{stats?.todaysShifts || 0}</div>
                     <div className="text-sm font-semibold text-[#475569]">Today's Shifts</div>
@@ -168,11 +177,16 @@ const DashboardHome: React.FC = () => {
                         <span className="text-[#0f766e] font-medium">✓ {(stats?.todaysShifts || 0) - (stats?.openShifts || 0)} Assigned</span>
                         <span className="text-[#B7791F] font-medium">○ {stats?.openShifts || 0} Open</span>
                     </div>
-                </div>
+                    <div className="text-xs font-semibold text-[#2FB7A3] mt-3 opacity-0 group-hover:opacity-100 transition-opacity">View Schedule →</div>
+                </button>
 
-                <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
+                {/* Present Today - Click to go to Attendance page */}
+                <button
+                    onClick={() => window.location.hash = '/employer/attendance'}
+                    className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm hover:shadow-lg hover:border-[#2FB7A3] transition-all cursor-pointer text-left group"
+                >
                     <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 rounded-xl bg-[#F1F5F9] text-[#64748B] text-2xl">⏰</div>
+                        <div className="p-3 rounded-xl bg-[#F1F5F9] text-[#64748B] text-2xl group-hover:bg-[#2FB7A3]/10 transition-colors">⏰</div>
                     </div>
                     <div className="text-3xl font-bold text-[#0F172A] mb-1">{todayAttendance.present}</div>
                     <div className="text-sm font-semibold text-[#475569]">Present Today</div>
@@ -180,11 +194,16 @@ const DashboardHome: React.FC = () => {
                         <span className="text-[#475569] font-medium">Clocked In: {todayAttendance.present}</span>
                         <span className="text-[#94A3B8]">Expected: {todayAttendance.scheduled}</span>
                     </div>
-                </div>
+                    <div className="text-xs font-semibold text-[#2FB7A3] mt-3 opacity-0 group-hover:opacity-100 transition-opacity">View Attendance →</div>
+                </button>
 
-                <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
+                {/* Payroll Ready - Click to go to Payroll page */}
+                <button
+                    onClick={() => window.location.hash = '/employer/payroll'}
+                    className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm hover:shadow-lg hover:border-[#2FB7A3] transition-all cursor-pointer text-left group"
+                >
                     <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 rounded-xl bg-[#F1F5F9] text-[#64748B] text-2xl">💰</div>
+                        <div className="p-3 rounded-xl bg-[#F1F5F9] text-[#64748B] text-2xl group-hover:bg-[#2FB7A3]/10 transition-colors">💰</div>
                     </div>
                     <div className="text-3xl font-bold text-[#0F172A] mb-1">{payrollStatus.ready}</div>
                     <div className="text-sm font-semibold text-[#475569]">Payroll Ready</div>
@@ -192,7 +211,8 @@ const DashboardHome: React.FC = () => {
                         <span className="text-[#94A3B8]">{payrollStatus.draft} Draft</span>
                         <span className="text-[#0f766e]">{payrollStatus.exported} Exported</span>
                     </div>
-                </div>
+                    <div className="text-xs font-semibold text-[#2FB7A3] mt-3 opacity-0 group-hover:opacity-100 transition-opacity">View Payroll →</div>
+                </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

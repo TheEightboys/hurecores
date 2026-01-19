@@ -68,6 +68,22 @@ const Signup: React.FC = () => {
   const [orgPhoneValid, setOrgPhoneValid] = useState(true);
   const [locPhoneValid, setLocPhoneValid] = useState(true);
 
+  // Features modal state
+  const [showFeaturesModal, setShowFeaturesModal] = useState(false);
+
+  // Healthcare-oriented feature list
+  const allFeatures = [
+    'Staff profiles by cadre (Doctor, Nurse, Reception, Lab, etc.) & role access',
+    'Duty rosters & shift scheduling (day/night/on-call)',
+    'Clock-in/out and shift attendance tracking',
+    'Leave requests & approvals',
+    'Overtime, allowances & shift differentials tracking',
+    'Payroll-ready pay calculations (export only — no payouts)',
+    'HR documents & policy acknowledgements',
+    'Reports, audit trail & CSV exports',
+    'Notifications & alerts'
+  ];
+
   const updateFormData = (field: keyof SignupFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -542,7 +558,7 @@ const Signup: React.FC = () => {
       </div>
 
       <div className="space-y-4">
-        {PLANS.map((plan) => (
+        {PLANS.map((plan, index) => (
           <div
             key={plan.id}
             onClick={() => updateFormData('plan', plan.id as SubscriptionPlan)}
@@ -551,8 +567,9 @@ const Signup: React.FC = () => {
               : 'border-slate-200 hover:border-slate-300'
               }`}
           >
-            {plan.id === 'Professional' && (
-              <span className="absolute -top-3 left-4 bg-teal-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+            {/* RECOMMENDED badge on Essential (first plan) for new small businesses */}
+            {index === 0 && (
+              <span className="absolute -top-3 right-4 bg-teal-600 text-white text-xs font-bold px-3 py-1 rounded-full">
                 RECOMMENDED
               </span>
             )}
@@ -560,9 +577,6 @@ const Signup: React.FC = () => {
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">{plan.name}</h3>
-                <p className="text-slate-500 text-sm mt-1">
-                  Up to {plan.maxStaff} staff • {plan.maxLocations} location{plan.maxLocations > 1 ? 's' : ''}
-                </p>
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-slate-900">
@@ -572,14 +586,33 @@ const Signup: React.FC = () => {
               </div>
             </div>
 
+            {/* Show plan limits */}
             <ul className="mt-4 space-y-2">
-              {plan.features.slice(0, 3).map((feature, i) => (
-                <li key={i} className="flex items-center text-sm text-slate-600">
-                  <span className="text-green-500 mr-2">✓</span>
-                  {feature}
-                </li>
-              ))}
+              <li className="flex items-center text-sm text-slate-600">
+                <span className="text-green-500 mr-2">✓</span>
+                {plan.locations} location{plan.locations > 1 ? 's' : ''}
+              </li>
+              <li className="flex items-center text-sm text-slate-600">
+                <span className="text-green-500 mr-2">✓</span>
+                {plan.staff} staff accounts
+              </li>
+              <li className="flex items-center text-sm text-slate-600">
+                <span className="text-green-500 mr-2">✓</span>
+                {plan.admins} admin roles
+              </li>
             </ul>
+
+            {/* All features included - clickable */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowFeaturesModal(true);
+              }}
+              className="mt-3 text-sm text-teal-600 font-medium hover:text-teal-700 underline underline-offset-2 flex items-center"
+            >
+              <span className="text-green-500 mr-1">✓</span> View all features →
+            </button>
 
             {formData.plan === plan.id && (
               <div className="absolute top-4 right-4 w-6 h-6 bg-teal-600 rounded-full flex items-center justify-center">
@@ -741,6 +774,54 @@ const Signup: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Features Modal */}
+      {showFeaturesModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowFeaturesModal(false)}>
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold text-slate-900">All Features Included</h3>
+                <button
+                  onClick={() => setShowFeaturesModal(false)}
+                  className="text-slate-400 hover:text-slate-600 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="text-sm text-slate-500 mt-1">Every plan includes all healthcare management features</p>
+            </div>
+
+            <div className="p-6">
+              <ul className="space-y-4">
+                {allFeatures.map((feature, index) => (
+                  <li key={index} className="flex items-start">
+                    <span className="flex-shrink-0 w-6 h-6 bg-teal-100 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                      <span className="text-teal-600 text-sm">✓</span>
+                    </span>
+                    <span className="text-slate-700">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="p-6 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+              <p className="text-sm text-slate-500 text-center">
+                Plans differ only in <strong>locations</strong>, <strong>staff accounts</strong>, and <strong>admin roles</strong>.
+              </p>
+              <button
+                onClick={() => setShowFeaturesModal(false)}
+                className="mt-4 w-full py-3 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700 transition-colors"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

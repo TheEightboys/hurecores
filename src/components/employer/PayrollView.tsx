@@ -38,6 +38,7 @@ const PayrollView: React.FC = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [activeTab, setActiveTab] = useState<'employees' | 'locums'>('employees');
+    const [showArchived, setShowArchived] = useState(false);
 
     const [newPeriod, setNewPeriod] = useState({
         name: '',
@@ -50,7 +51,7 @@ const PayrollView: React.FC = () => {
 
     useEffect(() => {
         loadPeriods();
-    }, [user?.organizationId]);
+    }, [user?.organizationId, showArchived]); // Reload when archive toggle changes
 
     useEffect(() => {
         if (selectedPeriod) {
@@ -64,9 +65,15 @@ const PayrollView: React.FC = () => {
         setLoading(true);
         try {
             const data = await payrollService.getPeriods(user.organizationId);
-            setPeriods(data);
-            if (data.length > 0) {
-                setSelectedPeriod(data[0]); // Select most recent
+            // Filter based on showArchived toggle
+            const filteredData = showArchived
+                ? data.filter((p: PayrollPeriod & { isArchived?: boolean }) => p.isArchived)
+                : data.filter((p: PayrollPeriod & { isArchived?: boolean }) => !p.isArchived);
+            setPeriods(filteredData);
+            if (filteredData.length > 0) {
+                setSelectedPeriod(filteredData[0]); // Select most recent
+            } else {
+                setSelectedPeriod(null);
             }
         } catch (error) {
             console.error('Error loading payroll periods:', error);
@@ -267,6 +274,34 @@ const PayrollView: React.FC = () => {
         }
     };
 
+    const handleArchivePeriod = async () => {
+        if (!user?.organizationId || !selectedPeriod) return;
+
+        const isCurrentlyArchived = (selectedPeriod as PayrollPeriod & { isArchived?: boolean }).isArchived;
+
+        const confirmed = window.confirm(
+            isCurrentlyArchived
+                ? `Unarchive "${selectedPeriod.name}"?\n\nThis will restore the period to the main list.`
+                : `📦 Archive "${selectedPeriod.name}"?\n\nArchived periods are hidden from the main list but can be viewed in the "Archived" view.`
+        );
+
+        if (!confirmed) return;
+
+        try {
+            if (isCurrentlyArchived) {
+                await payrollService.unarchivePeriod(user.organizationId, selectedPeriod.id);
+                setSuccess('Payroll period restored');
+            } else {
+                await payrollService.archivePeriod(user.organizationId, selectedPeriod.id);
+                setSuccess('Payroll period archived');
+            }
+            loadPeriods();
+            setTimeout(() => setSuccess(''), 3000);
+        } catch (err: any) {
+            setError(err.message || 'Failed to archive');
+        }
+    };
+
     const handleExport = async () => {
         if (!user?.organizationId || !selectedPeriod) return;
 
@@ -431,7 +466,24 @@ const PayrollView: React.FC = () => {
                 {/* Period List */}
                 <div className="lg:col-span-1">
                     <div className="bg-white rounded-2xl border border-slate-200 p-4">
-                        <h3 className="font-bold text-slate-900 mb-4">Payroll Periods</h3>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-bold text-slate-900">Payroll Periods</h3>
+                        </div>
+                        {/* Archive Toggle */}
+                        <div className="flex items-center justify-between bg-slate-50 rounded-lg p-2 mb-4">
+                            <span className="text-xs font-medium text-slate-600">
+                                {showArchived ? '📦 Archived' : '📋 Active'}
+                            </span>
+                            <button
+                                onClick={() => setShowArchived(!showArchived)}
+                                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${showArchived
+                                    ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                                    : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                                    }`}
+                            >
+                                {showArchived ? 'View Active' : 'View Archived'}
+                            </button>
+                        </div>
                         <div className="space-y-2">
                             {periods.map(period => (
                                 <button
@@ -555,12 +607,23 @@ const PayrollView: React.FC = () => {
                                     </>
                                 )}
                                 {selectedPeriod.isFinalized && (
-                                    <button
-                                        onClick={handleExport}
-                                        className="bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-blue-700"
-                                    >
-                                        📥 Export Employees CSV
-                                    </button>
+                                    <>
+                                        <button
+                                            onClick={handleExport}
+                                            className="bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-blue-700"
+                                        >
+                                            📥 Export Employees CSV
+                                        </button>
+                                        <button
+                                            onClick={handleArchivePeriod}
+                                            className={(selectedPeriod as PayrollPeriod & { isArchived?: boolean }).isArchived
+                                                ? "bg-amber-500 text-white px-4 py-2 rounded-xl font-semibold hover:bg-amber-600"
+                                                : "bg-slate-500 text-white px-4 py-2 rounded-xl font-semibold hover:bg-slate-600"
+                                            }
+                                        >
+                                            {(selectedPeriod as PayrollPeriod & { isArchived?: boolean }).isArchived ? '📤 Unarchive' : '📦 Archive'}
+                                        </button>
+                                    </>
                                 )}
                                 {!selectedPeriod.isFinalized && activeTab === 'locums' && (
                                     <button

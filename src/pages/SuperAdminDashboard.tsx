@@ -90,6 +90,7 @@ const SuperAdminDashboard: React.FC = () => {
     const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
     const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [showRevenue, setShowRevenue] = useState(true);
 
     // Billing config state
     const [billingConfig, setBillingConfig] = useState({
@@ -238,13 +239,21 @@ const SuperAdminDashboard: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-slate-50 flex font-sans">
-            {/* Sidebar */}
-            <div className="w-72 bg-gradient-to-b from-slate-900 to-slate-800 text-white fixed h-full hidden md:flex flex-col">
-                <div className="p-6 border-b border-slate-700">
-                    <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                        HURE Core
-                    </h1>
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Super Admin</span>
+            {/* Sidebar - Dark Teal Theme (matching Employer) */}
+            <div
+                className="w-72 text-white fixed h-full hidden md:flex flex-col"
+                style={{ background: 'linear-gradient(180deg, #1a2e35 0%, #152428 100%)' }}
+            >
+                <div className="p-6 border-b border-white/10">
+                    <div className="flex items-center gap-2">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#4fd1c5' }}>
+                            <span className="text-[#1a2e35] font-bold text-lg">HC</span>
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-bold text-white">HURE Core</h1>
+                            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#4fd1c5' }}>Super Admin</span>
+                        </div>
+                    </div>
                 </div>
 
                 <nav className="flex-1 p-4 space-y-1">
@@ -252,7 +261,11 @@ const SuperAdminDashboard: React.FC = () => {
                         <button
                             key={tab.id}
                             onClick={() => { setActiveTab(tab.id as any); setSearchQuery(''); }}
-                            className={`w-full text-left px-4 py-3 rounded-xl transition-all flex justify-between items-center ${activeTab === tab.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:bg-slate-700/50 hover:text-white'}`}
+                            className={`w-full text-left px-4 py-3 rounded-xl transition-all flex justify-between items-center ${activeTab === tab.id
+                                ? 'text-[#1a2e35] shadow-lg'
+                                : 'text-white/70 hover:bg-white/10 hover:text-white'
+                                }`}
+                            style={activeTab === tab.id ? { backgroundColor: '#4fd1c5' } : {}}
                         >
                             <span>{tab.label}</span>
                             {tab.badge > 0 && (
@@ -264,9 +277,9 @@ const SuperAdminDashboard: React.FC = () => {
                     ))}
                 </nav>
 
-                <div className="p-4 border-t border-slate-700">
-                    <div className="flex items-center gap-3 px-4 py-3 bg-slate-800/50 rounded-xl mb-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold">
+                <div className="p-4 border-t border-white/10">
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-3" style={{ backgroundColor: 'rgba(79, 209, 197, 0.1)' }}>
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[#1a2e35] font-bold" style={{ backgroundColor: '#4fd1c5' }}>
                             SA
                         </div>
                         <div className="flex-1">
@@ -276,7 +289,7 @@ const SuperAdminDashboard: React.FC = () => {
                     </div>
                     <button
                         onClick={logout}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/50 hover:bg-red-500/10 hover:text-red-400 transition-colors"
                     >
                         <span>🚪</span> Sign Out
                     </button>
@@ -460,7 +473,16 @@ const SuperAdminDashboard: React.FC = () => {
 
                         {/* Revenue This Month */}
                         <div>
-                            <h3 className="text-lg font-bold text-slate-800 mb-4">Revenue This Month</h3>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-bold text-slate-800">Revenue This Month</h3>
+                                <button
+                                    onClick={() => setShowRevenue(!showRevenue)}
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium text-slate-600 transition-colors"
+                                >
+                                    <span>{showRevenue ? '👁️' : '🙈'}</span>
+                                    {showRevenue ? 'Hide' : 'Show'}
+                                </button>
+                            </div>
                             <button
                                 onClick={() => setActiveTab('billing')}
                                 className="w-full bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-8 text-white relative overflow-hidden hover:from-slate-700 hover:to-slate-800 transition-all cursor-pointer group text-left"
@@ -469,10 +491,10 @@ const SuperAdminDashboard: React.FC = () => {
                                 <div className="relative z-10">
                                     <div className="text-sm font-medium text-slate-400 mb-2">Revenue This Month</div>
                                     <div className="text-4xl font-bold mb-2">
-                                        KES {stats.totalRevenue.toLocaleString()}
+                                        {showRevenue ? `KES ${stats.totalRevenue.toLocaleString()}` : '••••••'}
                                     </div>
                                     <div className="text-sm text-emerald-400 font-medium">
-                                        {stats.monthlyGrowth} from last month
+                                        {showRevenue ? `${stats.monthlyGrowth} from last month` : '•••••'}
                                     </div>
                                 </div>
                                 <div className="absolute right-6 top-1/2 -translate-y-1/2">

@@ -185,6 +185,48 @@ export function formatMonthYearKE(date: Date | string | number | undefined | nul
     }
 }
 
+/**
+ * Get today's date in Kenya timezone as YYYY-MM-DD string
+ * This ensures dates are correct even when client timezone differs
+ * Kenya is UTC+3 (Africa/Nairobi)
+ * @returns Today's date in YYYY-MM-DD format (Kenya time)
+ */
+export function getTodayDateKE(): string {
+    const now = new Date();
+    // Use Intl to get date parts in Kenya timezone
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Africa/Nairobi',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
+    // en-CA locale gives us YYYY-MM-DD format
+    return formatter.format(now);
+}
+
+/**
+ * Get a date in Kenya timezone as YYYY-MM-DD string
+ * @param date - Date object to convert
+ * @returns Date in YYYY-MM-DD format (Kenya time)
+ */
+export function getDateStringKE(date: Date): string {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Africa/Nairobi',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
+    return formatter.format(date);
+}
+
+/**
+ * Get current time in Kenya as ISO string with correct date
+ * @returns Current datetime in Kenya timezone
+ */
+export function getNowKE(): Date {
+    return new Date(); // Date object is always UTC, formatting handles timezone
+}
+
 export default {
     formatDateKE,
     formatDateTimeKE,
@@ -192,5 +234,8 @@ export default {
     formatDateLongKE,
     formatDateFullKE,
     getWeekdayShort,
-    formatMonthYearKE
+    formatMonthYearKE,
+    getTodayDateKE,
+    getDateStringKE,
+    getNowKE
 };

@@ -81,6 +81,7 @@ export interface StaffPermissions {
   documentsAndPolicies: boolean;
   payroll: boolean;
   settingsAdmin: boolean;
+  reportsAccess: boolean;
 }
 
 export const DEFAULT_PERMISSIONS: StaffPermissions = {
@@ -90,7 +91,8 @@ export const DEFAULT_PERMISSIONS: StaffPermissions = {
   leave: false,
   documentsAndPolicies: false,
   payroll: false,
-  settingsAdmin: false
+  settingsAdmin: false,
+  reportsAccess: false
 };
 
 // =====================================================

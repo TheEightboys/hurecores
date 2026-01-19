@@ -248,28 +248,43 @@ const AttendanceView: React.FC = () => {
                 </div>
             )}
 
-            {/* Today's Summary */}
+            {/* Today's Summary - Clickable Cards */}
             <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
-                <div className="bg-[#e0f2f1] border border-[#4fd1c5]/30 rounded-xl p-4 text-center">
+                <button
+                    onClick={() => setActiveTab('employees')}
+                    className="bg-[#e0f2f1] border border-[#4fd1c5]/30 rounded-xl p-4 text-center hover:shadow-lg hover:border-[#2FB7A3] transition-all cursor-pointer"
+                >
                     <div className="text-2xl font-bold text-[#0f766e]">{summary.present}</div>
                     <div className="text-sm text-[#134e4a]">Present Today</div>
-                </div>
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
+                </button>
+                <button
+                    onClick={() => setActiveTab('employees')}
+                    className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center hover:shadow-lg hover:border-amber-400 transition-all cursor-pointer"
+                >
                     <div className="text-2xl font-bold text-amber-700">{summary.partial}</div>
                     <div className="text-sm text-amber-600">Partial</div>
-                </div>
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+                </button>
+                <button
+                    onClick={() => setActiveTab('employees')}
+                    className="bg-red-50 border border-red-200 rounded-xl p-4 text-center hover:shadow-lg hover:border-red-400 transition-all cursor-pointer"
+                >
                     <div className="text-2xl font-bold text-red-700">{summary.absent}</div>
                     <div className="text-sm text-red-600">Absent</div>
-                </div>
-                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center">
+                </button>
+                <button
+                    onClick={() => setActiveTab('employees')}
+                    className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center hover:shadow-lg hover:border-purple-400 transition-all cursor-pointer"
+                >
                     <div className="text-2xl font-bold text-purple-700">{summary.onLeave}</div>
                     <div className="text-sm text-purple-600">On Leave</div>
-                </div>
-                <div className="bg-[#e0f2f1] border border-[#4fd1c5]/30 rounded-xl p-4 text-center">
+                </button>
+                <button
+                    onClick={() => setActiveTab('external')}
+                    className="bg-[#e0f2f1] border border-[#4fd1c5]/30 rounded-xl p-4 text-center hover:shadow-lg hover:border-[#2FB7A3] transition-all cursor-pointer"
+                >
                     <div className="text-2xl font-bold text-[#1a2e35]">{summary.locumScheduled}</div>
                     <div className="text-sm text-[#134e4a]">Locum Shifts</div>
-                </div>
+                </button>
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
                     <div className="text-2xl font-bold text-slate-700">{summary.totalHours.toFixed(1)}</div>
                     <div className="text-sm text-slate-600">Hours Worked</div>

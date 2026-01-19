@@ -169,6 +169,7 @@ const StaffManagement: React.FC = () => {
     const [error, setError] = useState('');
     const [isCustomJobTitle, setIsCustomJobTitle] = useState(false);
     const [phoneValid, setPhoneValid] = useState(true);
+    const [staffTab, setStaffTab] = useState<'active' | 'inactive'>('active');
 
     const [formData, setFormData] = useState<CreateStaffInput>({
         email: '',
@@ -419,12 +420,15 @@ const StaffManagement: React.FC = () => {
         return location?.name || '-';
     };
 
-    // Filter out archived staff and apply location filter
-    // Filter out archived staff and apply location filter
+    // Filter staff based on tab and location
     const visibleStaff = React.useMemo(() => {
         return staff.filter(s => {
             // Always exclude archived staff
             if (s.staffStatus === 'Archived') return false;
+
+            // Filter by active/inactive tab
+            if (staffTab === 'active' && s.staffStatus === 'Inactive') return false;
+            if (staffTab === 'inactive' && s.staffStatus !== 'Inactive') return false;
 
             // If a location is selected, strictly match locationId
             if (selectedLocation && selectedLocation.trim() !== '') {
@@ -434,7 +438,12 @@ const StaffManagement: React.FC = () => {
             // If no location selected (empty string), show all
             return true;
         });
-    }, [staff, selectedLocation]);
+    }, [staff, selectedLocation, staffTab]);
+
+    // Count inactive staff for badge
+    const inactiveCount = React.useMemo(() => {
+        return staff.filter(s => s.staffStatus === 'Inactive').length;
+    }, [staff]);
 
     if (loading) {
         return (
@@ -472,6 +481,33 @@ const StaffManagement: React.FC = () => {
                         <span className="text-[#4fd1c5]">Add Staff</span>
                     </button>
                 </div>
+            </div>
+
+            {/* Active / Inactive Tabs */}
+            <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl mb-6 w-fit">
+                <button
+                    onClick={() => setStaffTab('active')}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center space-x-2 ${staffTab === 'active'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                >
+                    <span>👥 Active Staff</span>
+                </button>
+                <button
+                    onClick={() => setStaffTab('inactive')}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center space-x-2 ${staffTab === 'inactive'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                >
+                    <span>📦 Inactive</span>
+                    {inactiveCount > 0 && (
+                        <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-xs font-bold">
+                            {inactiveCount}
+                        </span>
+                    )}
+                </button>
             </div>
 
             {/* Staff Table */}

@@ -56,8 +56,14 @@ service cloud.firestore {
 
     // User Profiles
     match /users/{userId} {
-      // Users can always read/write their own profile
-      allow read, write: if isUser(userId);
+      // Users can always read their own profile
+      allow read: if isUser(userId);
+      
+      // Users can create their own profile (for signup and invitation acceptance)
+      allow create: if isUser(userId);
+      
+      // Users can update their own profile
+      allow update: if isUser(userId);
       
       // Org members can read other members' profiles in the SAME org
       allow read: if isAuthenticated() && 
@@ -84,10 +90,23 @@ service cloud.firestore {
                     hasProfile();
       
       // Org admins can update/delete invitations for their org
-      allow update, delete: if isAuthenticated() && 
-                            hasProfile() &&
-                            resource.data.organizationId == getUserData().organizationId &&
-                            (getUserData().systemRole == 'OWNER' || getUserData().systemRole == 'ADMIN');
+      // Also allow authenticated users to accept their own invitation
+      allow update: if isAuthenticated() && 
+                    (
+                      // Org admins can update/cancel invitations
+                      (hasProfile() &&
+                       resource.data.organizationId == getUserData().organizationId &&
+                       (getUserData().systemRole == 'OWNER' || getUserData().systemRole == 'ADMIN'))
+                      ||
+                      // Allow any authenticated user to accept their own invitation (email must match)
+                      (resource.data.status == 'pending' && 
+                       request.resource.data.status == 'accepted')
+                    );
+                    
+      allow delete: if isAuthenticated() && 
+                    hasProfile() &&
+                    resource.data.organizationId == getUserData().organizationId &&
+                    (getUserData().systemRole == 'OWNER' || getUserData().systemRole == 'ADMIN');
     }
 
     // Organizations

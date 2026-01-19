@@ -12,6 +12,7 @@ import type { BillingSubscriptionState } from '../../types';
 interface SubscriptionGuardProps {
     children: React.ReactNode;
     allowBillingAccess?: boolean; // If true, always allow access (for billing pages)
+    allowVerificationAccess?: boolean; // If true, always allow access (for verification page)
 }
 
 interface GuardState {
@@ -23,7 +24,8 @@ interface GuardState {
 
 const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
     children,
-    allowBillingAccess = false
+    allowBillingAccess = false,
+    allowVerificationAccess = false
 }) => {
     const { user } = useAuth();
     const [state, setState] = useState<GuardState>({
@@ -53,7 +55,7 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
 
             setState({
                 loading: false,
-                canAccess: allowed || allowBillingAccess,
+                canAccess: allowed || allowBillingAccess || allowVerificationAccess,
                 billingState,
                 reason,
             });
