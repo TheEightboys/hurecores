@@ -207,6 +207,7 @@ const StaffManagement: React.FC = () => {
     const [isCustomJobTitle, setIsCustomJobTitle] = useState(false);
     const [phoneValid, setPhoneValid] = useState(true);
     const [staffTab, setStaffTab] = useState<'active' | 'inactive'>('active');
+    const [showSalary, setShowSalary] = useState(false);
 
     const [formData, setFormData] = useState<CreateStaffInput>({
         email: '',
@@ -865,16 +866,28 @@ const StaffManagement: React.FC = () => {
                             </div>
 
                             {/* Compensation fields based on employment type */}
+                            <div className="flex justify-between items-center mt-6 mb-2">
+                                <h3 className="text-sm font-bold text-slate-700">Compensation Details</h3>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowSalary(!showSalary)}
+                                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                                >
+                                    {showSalary ? '🙈 Hide' : '👁️ Show'}
+                                </button>
+                            </div>
+
                             {/* Full-Time: Monthly Salary only */}
                             {formData.employmentType === 'Full-Time' && (
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-2">Monthly Salary (KES) <span className="font-normal text-slate-400">- Optional</span></label>
                                     <input
-                                        type="number"
+                                        type={showSalary ? "number" : "password"}
                                         value={formData.monthlySalaryCents ? formData.monthlySalaryCents / 100 : ''}
                                         onChange={(e) => setFormData(prev => ({ ...prev, monthlySalaryCents: Number(e.target.value) * 100 }))}
                                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                                        placeholder="e.g., 50000"
+                                        placeholder={showSalary ? "e.g., 50000" : "••••••"}
+                                        readOnly={!showSalary}
                                     />
                                     <p className="text-xs text-[#94A3B8] mt-1">You can configure or change payroll details later.</p>
                                 </div>
@@ -886,21 +899,23 @@ const StaffManagement: React.FC = () => {
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-2">Monthly Salary (KES) <span className="font-normal text-slate-400">- Optional</span></label>
                                         <input
-                                            type="number"
+                                            type={showSalary ? "number" : "password"}
                                             value={formData.monthlySalaryCents ? formData.monthlySalaryCents / 100 : ''}
                                             onChange={(e) => setFormData(prev => ({ ...prev, monthlySalaryCents: Number(e.target.value) * 100 }))}
                                             className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                                            placeholder="e.g., 25000"
+                                            placeholder={showSalary ? "e.g., 25000" : "••••••"}
+                                            readOnly={!showSalary}
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-2">Hourly Rate (KES) <span className="font-normal text-slate-400">- Optional</span></label>
                                         <input
-                                            type="number"
+                                            type={showSalary ? "number" : "password"}
                                             value={formData.hourlyRateCents ? formData.hourlyRateCents / 100 : ''}
                                             onChange={(e) => setFormData(prev => ({ ...prev, hourlyRateCents: Number(e.target.value) * 100 }))}
                                             className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                                            placeholder="e.g., 500"
+                                            placeholder={showSalary ? "e.g., 500" : "••••••"}
+                                            readOnly={!showSalary}
                                         />
                                     </div>
                                     <p className="col-span-2 text-xs text-[#94A3B8]">You can configure or change payroll details later.</p>
@@ -1112,16 +1127,28 @@ const StaffManagement: React.FC = () => {
                             </div>
 
                             {/* Compensation fields based on employment type */}
+                            <div className="flex justify-between items-center mt-6 mb-2">
+                                <h3 className="text-sm font-bold text-slate-700">Compensation Details</h3>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowSalary(!showSalary)}
+                                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                                >
+                                    {showSalary ? '🙈 Hide' : '👁️ Show'}
+                                </button>
+                            </div>
+
                             {/* Full-Time: Monthly Salary only */}
                             {formData.employmentType === 'Full-Time' && (
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-2">Monthly Salary (KES) <span className="font-normal text-slate-400">- Optional</span></label>
                                     <input
-                                        type="number"
+                                        type={showSalary ? "number" : "password"}
                                         value={formData.monthlySalaryCents ? formData.monthlySalaryCents / 100 : ''}
                                         onChange={(e) => setFormData(prev => ({ ...prev, monthlySalaryCents: Number(e.target.value) * 100 }))}
                                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                                        placeholder="e.g., 50000"
+                                        placeholder={showSalary ? "e.g., 50000" : "••••••"}
+                                        readOnly={!showSalary}
                                     />
                                     <p className="text-xs text-[#94A3B8] mt-1">You can configure or change payroll details later.</p>
                                 </div>
@@ -1133,21 +1160,23 @@ const StaffManagement: React.FC = () => {
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-2">Monthly Salary (KES) <span className="font-normal text-slate-400">- Optional</span></label>
                                         <input
-                                            type="number"
+                                            type={showSalary ? "number" : "password"}
                                             value={formData.monthlySalaryCents ? formData.monthlySalaryCents / 100 : ''}
                                             onChange={(e) => setFormData(prev => ({ ...prev, monthlySalaryCents: Number(e.target.value) * 100 }))}
                                             className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                                            placeholder="e.g., 25000"
+                                            placeholder={showSalary ? "e.g., 25000" : "••••••"}
+                                            readOnly={!showSalary}
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-2">Hourly Rate (KES) <span className="font-normal text-slate-400">- Optional</span></label>
                                         <input
-                                            type="number"
+                                            type={showSalary ? "number" : "password"}
                                             value={formData.hourlyRateCents ? formData.hourlyRateCents / 100 : ''}
                                             onChange={(e) => setFormData(prev => ({ ...prev, hourlyRateCents: Number(e.target.value) * 100 }))}
                                             className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                                            placeholder="e.g., 500"
+                                            placeholder={showSalary ? "e.g., 500" : "••••••"}
+                                            readOnly={!showSalary}
                                         />
                                     </div>
                                     <p className="col-span-2 text-xs text-[#94A3B8]">You can configure or change payroll details later.</p>

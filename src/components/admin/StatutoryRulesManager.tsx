@@ -5,6 +5,8 @@ import type { StatutoryRules, PAYEBand, DeductionPreview } from '../../types';
 const StatutoryRulesManager: React.FC = () => {
     const [rules, setRules] = useState<StatutoryRules | null>(null);
     const [loading, setLoading] = useState(true);
+    const [initializing, setInitializing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [previewSalary, setPreviewSalary] = useState(100000);
     const [previewAllowances, setPreviewAllowances] = useState(0);
     const [preview, setPreview] = useState<DeductionPreview | null>(null);
@@ -21,13 +23,34 @@ const StatutoryRulesManager: React.FC = () => {
 
     const loadRules = async () => {
         setLoading(true);
+        setError(null);
         try {
             const data = await statutoryRulesService.getCurrentRules();
-            setRules(data);
-        } catch (error) {
-            console.error('Error loading rules:', error);
+            if (data) {
+                setRules(data);
+            } else {
+                setRules(null);
+                // Optional: Could verify if we want to show a specific error here
+            }
+        } catch (err: any) {
+            console.error('Error loading rules:', err);
+            setError(err.message || 'Failed to load statutory rules');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleInitializeDefaults = async () => {
+        setInitializing(true);
+        setError(null);
+        try {
+            await statutoryRulesService.createDefaultRules();
+            await loadRules();
+        } catch (err: any) {
+            console.error('Error initializing defaults:', err);
+            setError(err.message || 'Failed to create default rules');
+        } finally {
+            setInitializing(false);
         }
     };
 
@@ -44,23 +67,56 @@ const StatutoryRulesManager: React.FC = () => {
     if (loading) {
         return (
             <div className="p-12 flex items-center justify-center">
-                <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+                <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full"></div>
             </div>
         );
     }
 
     if (!rules) {
         return (
-            <div className="p-8 text-center bg-white rounded-2xl border border-slate-200">
-                <div className="text-4xl mb-4">📜</div>
-                <h3 className="text-lg font-bold text-slate-900">No Rules Found</h3>
-                <p className="text-slate-500 mb-4">The statutory rules configuration is missing.</p>
-                <button
-                    onClick={() => statutoryRulesService.createDefaultRules().then(loadRules)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
-                >
-                    Initialize Default Rules
-                </button>
+            <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-sm max-w-2xl mx-auto mt-8">
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                    📜
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">No Statutory Rules Found</h3>
+                <p className="text-slate-500 mb-6 max-w-md mx-auto">
+                    The statutory rules configuration is missing. These rules are required for accurate payroll Tax, NSSF, and NHDF/SHA calculations.
+                </p>
+
+                {error && (
+                    <div className="bg-red-50 text-red-700 p-4 rounded-xl mb-6 text-sm flex items-start gap-3 text-left">
+                        <span className="text-xl">⚠️</span>
+                        <div>
+                            <span className="font-bold block mb-1">Error</span>
+                            {error}
+                        </div>
+                    </div>
+                )}
+
+                <div className="flex gap-4 justify-center">
+                    <button
+                        onClick={loadRules}
+                        className="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-bold transition-colors"
+                    >
+                        Retry Loading
+                    </button>
+                    <button
+                        onClick={handleInitializeDefaults}
+                        disabled={initializing}
+                        className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-bold shadow-lg shadow-emerald-200 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {initializing ? (
+                            <>
+                                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                                Initializing...
+                            </>
+                        ) : (
+                            <>
+                                <span>⚡</span> Initialize Default Rules
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
         );
     }

@@ -63,12 +63,11 @@ export const statutoryRulesService = {
      */
     async getCurrentRules(): Promise<StatutoryRules | null> {
         try {
+            // Simplified query to avoid composite index requirements
+            // We fetch all rules for the country and filter in memory since dataset is small
             const q = query(
                 statutoryRulesRef,
-                where('country', '==', 'Kenya'),
-                where('isActive', '==', true),
-                orderBy('version', 'desc'),
-                limit(1)
+                where('country', '==', 'Kenya')
             );
 
             const snapshot = await getDocs(q);
@@ -79,14 +78,29 @@ export const statutoryRulesService = {
                 return await this.createDefaultRules();
             }
 
-            const docData = snapshot.docs[0].data();
-            return {
-                id: snapshot.docs[0].id,
-                ...docData,
-                effectiveFrom: docData.effectiveFrom,
-                effectiveUntil: docData.effectiveUntil || undefined,
-                updatedAt: docData.updatedAt?.toDate?.()?.toISOString() || docData.updatedAt
-            } as StatutoryRules;
+            // Client-side filtering and sorting
+            const rules = snapshot.docs
+                .map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    effectiveFrom: doc.data().effectiveFrom,
+                    effectiveUntil: doc.data().effectiveUntil || undefined,
+                    updatedAt: doc.data().updatedAt?.toDate?.()?.toISOString() || doc.data().updatedAt
+                } as StatutoryRules))
+                .filter(rule => rule.isActive)
+                .sort((a, b) => b.version - a.version);
+
+            if (rules.length === 0) {
+                // Rules exist but none are active? This shouldn't happen normally if defaults are created.
+                // We might want to return the latest inactive one or null.
+                // For now, let's assume we want to create defaults if absolutely nothing active is found
+                // BUT if we have history, we might not want to overwrite it blindly.
+                // Let's return null here, causing the UI to show "No Rules" 
+                // and the user can click "Initialize" which creates a NEW active default.
+                return null;
+            }
+
+            return rules[0];
         } catch (error) {
             console.error('Error getting current rules:', error);
             return null;
@@ -98,18 +112,20 @@ export const statutoryRulesService = {
      */
     async getRulesHistory(): Promise<StatutoryRules[]> {
         try {
+            // Simplified query, client-side sort
             const q = query(
                 statutoryRulesRef,
-                where('country', '==', 'Kenya'),
-                orderBy('version', 'desc')
+                where('country', '==', 'Kenya')
             );
 
             const snapshot = await getDocs(q);
-            return snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                updatedAt: doc.data().updatedAt?.toDate?.()?.toISOString() || doc.data().updatedAt
-            })) as StatutoryRules[];
+            return snapshot.docs
+                .map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    updatedAt: doc.data().updatedAt?.toDate?.()?.toISOString() || doc.data().updatedAt
+                } as StatutoryRules))
+                .sort((a, b) => b.version - a.version);
         } catch (error) {
             console.error('Error getting rules history:', error);
             return [];

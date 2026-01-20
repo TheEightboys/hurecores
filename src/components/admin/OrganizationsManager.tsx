@@ -81,7 +81,7 @@ const OrganizationsManager: React.FC = () => {
     const { user } = useAuth();
 
     // Status filter tabs
-    const [statusTab, setStatusTab] = useState<'Active' | 'Suspended' | 'Approved' | 'Rejected'>('Active');
+    const [statusTab, setStatusTab] = useState<'All' | 'Active' | 'Suspended' | 'Approved' | 'Rejected'>('All');
     const [planFilter, setPlanFilter] = useState<string>('All');
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -135,12 +135,10 @@ const OrganizationsManager: React.FC = () => {
                 } as Organization;
             });
 
-            // Filter out Pending Review - those belong in Approvals module only
-            const filteredOrgs = orgsData.filter(o =>
-                o.approvalStatus !== 'Pending Review'
-            );
-
-            setOrganizations(filteredOrgs);
+            // We now show all organizations including 'Pending Review' if desired, 
+            // but effectively 'Pending Review' are usually in Approvals.
+            // However, the "All" tab should show everything.
+            setOrganizations(orgsData);
         } catch (error) {
             console.error('Error loading organizations:', error);
         } finally {
@@ -405,7 +403,11 @@ const OrganizationsManager: React.FC = () => {
     // =====================================================
 
     const getFilteredOrgs = () => {
-        let filtered = organizations.filter(o => o.approvalStatus === statusTab);
+        let filtered = organizations;
+
+        if (statusTab !== 'All') {
+            filtered = filtered.filter(o => o.approvalStatus === statusTab);
+        }
 
         if (planFilter !== 'All') {
             filtered = filtered.filter(o => o.plan === planFilter);
@@ -424,6 +426,7 @@ const OrganizationsManager: React.FC = () => {
     };
 
     const getCounts = () => ({
+        all: organizations.length,
         active: organizations.filter(o => o.approvalStatus === 'Active').length,
         suspended: organizations.filter(o => o.approvalStatus === 'Suspended').length,
         approved: organizations.filter(o => o.approvalStatus === 'Approved').length,
@@ -446,6 +449,8 @@ const OrganizationsManager: React.FC = () => {
                 return 'bg-slate-100 text-slate-700';
             case 'Rejected':
                 return 'bg-red-100 text-red-700';
+            case 'Pending Review':
+                return 'bg-amber-100 text-amber-700';
             default:
                 return 'bg-slate-100 text-slate-600';
         }
@@ -485,10 +490,19 @@ const OrganizationsManager: React.FC = () => {
                 {/* Status Tabs */}
                 <div className="flex items-center gap-2 mb-6">
                     <button
+                        onClick={() => setStatusTab('All')}
+                        className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${statusTab === 'All'
+                            ? 'bg-slate-800 text-white shadow-lg'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                            }`}
+                    >
+                        All <span className="ml-1 opacity-70">{counts.all}</span>
+                    </button>
+                    <button
                         onClick={() => setStatusTab('Active')}
                         className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${statusTab === 'Active'
-                                ? 'bg-blue-600 text-white shadow-lg'
-                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                            ? 'bg-blue-600 text-white shadow-lg'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                             }`}
                     >
                         Active <span className="ml-1 opacity-70">{counts.active}</span>
@@ -496,8 +510,8 @@ const OrganizationsManager: React.FC = () => {
                     <button
                         onClick={() => setStatusTab('Suspended')}
                         className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${statusTab === 'Suspended'
-                                ? 'bg-blue-600 text-white shadow-lg'
-                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                            ? 'bg-blue-600 text-white shadow-lg'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                             }`}
                     >
                         Suspended <span className="ml-1 opacity-70">{counts.suspended}</span>
@@ -505,8 +519,8 @@ const OrganizationsManager: React.FC = () => {
                     <button
                         onClick={() => setStatusTab('Approved')}
                         className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${statusTab === 'Approved'
-                                ? 'bg-blue-600 text-white shadow-lg'
-                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                            ? 'bg-blue-600 text-white shadow-lg'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                             }`}
                     >
                         Approved (Not Live) <span className="ml-1 opacity-70">{counts.approved}</span>
@@ -514,8 +528,8 @@ const OrganizationsManager: React.FC = () => {
                     <button
                         onClick={() => setStatusTab('Rejected')}
                         className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${statusTab === 'Rejected'
-                                ? 'bg-blue-600 text-white shadow-lg'
-                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                            ? 'bg-blue-600 text-white shadow-lg'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                             }`}
                     >
                         Rejected <span className="ml-1 opacity-70">{counts.rejected}</span>
@@ -693,8 +707,8 @@ const OrganizationsManager: React.FC = () => {
                                 key={tab}
                                 onClick={() => setProfileTab(tab as any)}
                                 className={`flex-1 py-3 text-sm font-medium transition-colors ${profileTab === tab
-                                        ? 'text-blue-600 border-b-2 border-blue-600'
-                                        : 'text-slate-500 hover:text-slate-700'
+                                    ? 'text-blue-600 border-b-2 border-blue-600'
+                                    : 'text-slate-500 hover:text-slate-700'
                                     }`}
                             >
                                 {tab === 'overview' && 'Overview'}
@@ -780,8 +794,8 @@ const OrganizationsManager: React.FC = () => {
                                                                 onClick={() => handleEnableFacility(facility)}
                                                                 disabled={actionLoading || selectedOrg.approvalStatus !== 'Active'}
                                                                 className={`text-xs font-medium ${selectedOrg.approvalStatus !== 'Active'
-                                                                        ? 'text-slate-400 cursor-not-allowed'
-                                                                        : 'text-emerald-600 hover:underline'
+                                                                    ? 'text-slate-400 cursor-not-allowed'
+                                                                    : 'text-emerald-600 hover:underline'
                                                                     }`}
                                                                 title={selectedOrg.approvalStatus !== 'Active' ? 'Parent org must be Active' : ''}
                                                             >

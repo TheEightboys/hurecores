@@ -63,6 +63,7 @@ interface BillingAlert {
 const BillingManager: React.FC = () => {
     const { user } = useAuth();
     const [billingTab, setBillingTab] = useState<'overview' | 'subscriptions' | 'pricing'>('overview');
+    const [showFinancials, setShowFinancials] = useState(false);
 
     // Data
     const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -441,7 +442,16 @@ const BillingManager: React.FC = () => {
                 <div className="space-y-8">
                     {/* Billing Metrics */}
                     <div>
-                        <h3 className="text-lg font-bold text-slate-800 mb-4">Billing Metrics</h3>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold text-slate-800">Billing Metrics</h3>
+                            <button
+                                onClick={() => setShowFinancials(!showFinancials)}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium text-slate-600 transition-colors"
+                            >
+                                <span>{showFinancials ? '🙈' : '👁️'}</span>
+                                {showFinancials ? 'Hide Values' : 'Show Values'}
+                            </button>
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {/* Total MRR */}
                             <button
@@ -449,7 +459,9 @@ const BillingManager: React.FC = () => {
                                 className="bg-white p-6 rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all text-left group"
                             >
                                 <div className="text-sm font-medium text-slate-500 mb-2">Total MRR</div>
-                                <div className="text-4xl font-bold text-blue-600">{formatCurrency(metrics.totalMRR)}</div>
+                                <div className="text-4xl font-bold text-blue-600">
+                                    {showFinancials ? formatCurrency(metrics.totalMRR) : '••••••'}
+                                </div>
                                 <div className="text-xs text-slate-500 mt-2">Monthly recurring revenue</div>
                                 <div className="text-xs font-semibold text-blue-600 mt-3 group-hover:underline">View more →</div>
                             </button>
@@ -460,7 +472,9 @@ const BillingManager: React.FC = () => {
                                 className="bg-white p-6 rounded-2xl border border-slate-200 hover:border-emerald-300 hover:shadow-lg transition-all text-left group"
                             >
                                 <div className="text-sm font-medium text-slate-500 mb-2">Revenue This Month</div>
-                                <div className="text-4xl font-bold text-emerald-600">{formatCurrency(metrics.revenueThisMonth)}</div>
+                                <div className="text-4xl font-bold text-emerald-600">
+                                    {showFinancials ? formatCurrency(metrics.revenueThisMonth) : '••••••'}
+                                </div>
                                 <div className="text-xs text-slate-500 mt-2">Total revenue collected this month</div>
                                 <div className="text-xs font-semibold text-emerald-600 mt-3 group-hover:underline">View more →</div>
                             </button>
@@ -471,11 +485,15 @@ const BillingManager: React.FC = () => {
                                 className="bg-white p-6 rounded-2xl border border-slate-200 hover:border-red-300 hover:shadow-lg transition-all text-left group"
                             >
                                 <div className="text-sm font-medium text-slate-500 mb-2">Suspended (Unpaid)</div>
-                                <div className="text-4xl font-bold text-red-600">{formatCurrency(metrics.suspendedAmount)}</div>
+                                <div className="text-4xl font-bold text-red-600">
+                                    {showFinancials ? formatCurrency(metrics.suspendedAmount) : '••••••'}
+                                </div>
                                 <div className="text-xs text-slate-500 mt-2">Restricted due to non-payment</div>
                                 <div className="flex justify-between items-center mt-3">
                                     <span className="text-xs font-semibold text-red-600 group-hover:underline">View more →</span>
-                                    <span className="text-xs font-bold text-red-600">{formatCurrency(metrics.suspendedAmount)}</span>
+                                    <span className="text-xs font-bold text-red-600">
+                                        {showFinancials ? formatCurrency(metrics.suspendedAmount) : '••••••'}
+                                    </span>
                                 </div>
                             </button>
                         </div>

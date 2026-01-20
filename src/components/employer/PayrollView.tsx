@@ -39,7 +39,7 @@ const PayrollView: React.FC = () => {
     const [success, setSuccess] = useState('');
     const [activeTab, setActiveTab] = useState<'employees' | 'locums'>('employees');
     const [showArchived, setShowArchived] = useState(false);
-    const [showSalaries, setShowSalaries] = useState(true); // Toggle to hide/show salary information
+    const [showSalaries, setShowSalaries] = useState(false); // Toggle to hide/show salary information
 
     const [newPeriod, setNewPeriod] = useState({
         name: '',
