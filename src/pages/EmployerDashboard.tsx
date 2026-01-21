@@ -16,6 +16,7 @@ import LocationsManager from '../components/employer/LocationsManager';
 import PermissionsManager from '../components/employer/PermissionsManager';
 import SettingsView from '../components/employer/SettingsView';
 import SettingsRulesView from '../components/employer/SettingsRulesView';
+import StatutoryPayeRules from '../components/employer/StatutoryPayeRules';
 import DocumentsPoliciesManager from '../components/employer/DocumentsPoliciesManager';
 import AuditLogView from '../components/employer/AuditLogView';
 import ReportsView from '../components/employer/ReportsView';
@@ -166,6 +167,11 @@ const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ user }) => {
             <Route path="/settings-rules" element={
               <SubscriptionGuard>
                 <SettingsRulesView />
+              </SubscriptionGuard>
+            } />
+            <Route path="/statutory-rules" element={
+              <SubscriptionGuard>
+                <StatutoryPayeRules />
               </SubscriptionGuard>
             } />
             <Route path="/documents" element={

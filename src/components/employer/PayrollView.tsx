@@ -71,8 +71,8 @@ const PayrollView: React.FC = () => {
             const data = await payrollService.getPeriods(user.organizationId);
             // Filter based on showArchived toggle
             const filteredData = showArchived
-                ? data.filter((p: PayrollPeriod & { isArchived?: boolean }) => p.isArchived)
-                : data.filter((p: PayrollPeriod & { isArchived?: boolean }) => !p.isArchived);
+                ? data.filter(p => p.isArchived)
+                : data.filter(p => !p.isArchived);
             setPeriods(filteredData);
             if (filteredData.length > 0) {
                 setSelectedPeriod(filteredData[0]); // Select most recent
@@ -281,7 +281,7 @@ const PayrollView: React.FC = () => {
     const handleArchivePeriod = async () => {
         if (!user?.organizationId || !selectedPeriod) return;
 
-        const isCurrentlyArchived = (selectedPeriod as PayrollPeriod & { isArchived?: boolean }).isArchived;
+        const isCurrentlyArchived = selectedPeriod.isArchived;
 
         const confirmed = window.confirm(
             isCurrentlyArchived
@@ -632,24 +632,24 @@ const PayrollView: React.FC = () => {
                                     </>
                                 )}
                                 {selectedPeriod.isFinalized && (
-                                    <>
-                                        <button
-                                            onClick={handleExport}
-                                            className="bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-blue-700"
-                                        >
-                                            📥 Export Employees CSV
-                                        </button>
-                                        <button
-                                            onClick={handleArchivePeriod}
-                                            className={(selectedPeriod as PayrollPeriod & { isArchived?: boolean }).isArchived
-                                                ? "bg-amber-500 text-white px-4 py-2 rounded-xl font-semibold hover:bg-amber-600"
-                                                : "bg-slate-500 text-white px-4 py-2 rounded-xl font-semibold hover:bg-slate-600"
-                                            }
-                                        >
-                                            {(selectedPeriod as PayrollPeriod & { isArchived?: boolean }).isArchived ? '📤 Unarchive' : '📦 Archive'}
-                                        </button>
-                                    </>
+                                    <button
+                                        onClick={handleExport}
+                                        className="bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-blue-700"
+                                    >
+                                        📥 Export Employees CSV
+                                    </button>
                                 )}
+                                {/* Archive button now always visible for both draft and finalized periods */}
+                                <button
+                                    onClick={handleArchivePeriod}
+                                    className={selectedPeriod.isArchived
+                                        ? "bg-amber-500 text-white px-4 py-2 rounded-xl font-semibold hover:bg-amber-600"
+                                        : "bg-slate-500 text-white px-4 py-2 rounded-xl font-semibold hover:bg-slate-600"
+                                    }
+                                    title={selectedPeriod.isArchived ? "Restore this period from archive" : "Move this period to archive"}
+                                >
+                                    {selectedPeriod.isArchived ? '📤 Unarchive' : '📦 Archive'}
+                                </button>
                                 {!selectedPeriod.isFinalized && activeTab === 'locums' && (
                                     <button
                                         onClick={() => {/* Export locums as CSV */ }}
@@ -659,6 +659,7 @@ const PayrollView: React.FC = () => {
                                     </button>
                                 )}
                             </div>
+
 
                             {/* Employees Tab Content */}
                             {activeTab === 'employees' && (

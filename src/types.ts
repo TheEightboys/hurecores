@@ -453,6 +453,7 @@ export interface PayrollPeriod {
   finalizedBy?: string;
   createdAt: string;
   updatedAt: string;
+  isArchived?: boolean;
   // Joined
   entries?: PayrollEntry[];
 }
@@ -890,6 +891,11 @@ export interface StatutoryRules {
   nssfEmployeeRate: number;    // as decimal (0.06 = 6%)
   nssfEmployerRate: number;    // as decimal (0.06 = 6%)
   nssfCap?: number;            // Optional cap amount
+  nssfTier1Limit: number;      // e.g. 6000
+  nssfTier2Limit: number;      // e.g. 18000
+
+  // Personal Relief (Monthly)
+  personalRelief: number;      // e.g. 2400
 
   // NHDF (National Housing Development Fund)
   nhdfRate: number;            // as decimal (0.015 = 1.5%)

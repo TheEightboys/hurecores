@@ -356,7 +356,7 @@ const OrgDetails: React.FC = () => {
                             <div className="flex items-center space-x-4">
                                 <input
                                     type="file"
-                                    accept=".pdf,.jpg,.jpeg,.png"
+                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
                                     onChange={handleOrgDocUpload}
                                     className="hidden"
                                     id="org-doc-upload"
@@ -378,6 +378,7 @@ const OrgDetails: React.FC = () => {
                                     </a>
                                 )}
                             </div>
+                            <p className="text-xs text-slate-400 mt-1">Supported: PDF, Images, Word, Excel</p>
                         </div>
 
                         <button
@@ -464,16 +465,30 @@ const OrgDetails: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    {/* Pending location notice */}
-                                    {location.status === 'Pending' && (
+                                    {/* Limited Access Notice */}
+                                    {(location.status === 'Pending' || location.status === 'Unverified') && (
                                         <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
                                             <p className="text-xs font-semibold text-amber-800 mb-2">⚠️ Limited actions until verified</p>
-                                            <div className="grid grid-cols-2 gap-1 text-xs text-amber-700">
-                                                <p>• Scheduling: ✅ Allowed</p>
-                                                <p>• Attendance: ✅ Allowed</p>
-                                                <p>• Payroll preview: ✅ Allowed</p>
-                                                <p>• Payroll payout: ❌ Blocked</p>
-                                                <p>• Invoicing: ❌ Blocked</p>
+                                            <div className="space-y-1 text-xs">
+                                                <p className="text-emerald-700 font-semibold">Employer CAN access:</p>
+                                                <div className="pl-2 space-y-0.5 text-emerald-700">
+                                                    <p>• Scheduling</p>
+                                                    <p>• Attendance</p>
+                                                    <p>• Leave</p>
+                                                    <p>• Staff onboarding</p>
+                                                    <p>• Credential collection</p>
+                                                    <p>• Basic HR records</p>
+                                                </div>
+                                                <p className="text-red-700 font-semibold mt-2">🚫 Employer CANNOT access:</p>
+                                                <div className="pl-2 space-y-0.5 text-red-700">
+                                                    <p>• Payroll module (at all)</p>
+                                                    <p>• Payroll previews</p>
+                                                    <p>• Payroll exports</p>
+                                                    <p>• Payroll Report (under report)</p>
+                                                    <p>• Pay history generation</p>
+                                                    <p>• Employees pay visibility</p>
+                                                    <p>• Pay History, employee dashboard</p>
+                                                </div>
                                             </div>
                                         </div>
                                     )}
@@ -570,7 +585,7 @@ const OrgDetails: React.FC = () => {
                                 <div className="flex items-center space-x-4">
                                     <input
                                         type="file"
-                                        accept=".pdf,.jpg,.jpeg,.png"
+                                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
                                         onChange={handleFacilityDocUpload}
                                         className="hidden"
                                         id="facility-doc-upload"
@@ -587,6 +602,7 @@ const OrgDetails: React.FC = () => {
                                         </a>
                                     )}
                                 </div>
+                                <p className="text-xs text-slate-400 mt-1">Supported: PDF, Images, Word, Excel</p>
                             </div>
 
                             <div className="flex space-x-3 mt-6">

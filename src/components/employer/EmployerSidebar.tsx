@@ -34,6 +34,7 @@ const EmployerSidebar: React.FC<EmployerSidebarProps> = ({ isOpen, setIsOpen, us
                 { name: 'Locations & Facilities', icon: '📍', path: '/employer/locations' },
                 { name: 'Billing & Settings', icon: NAVIGATION_ICONS.Billing, path: '/employer/billing' },
                 { name: 'Settings / Rules', icon: '⚙️', path: '/employer/settings-rules' },
+                { name: 'Statutory Rules', icon: '⚖️', path: '/employer/statutory-rules' },
                 { name: 'Permissions', icon: '🔐', path: '/employer/permissions' },
                 { name: 'Docs / Policies', icon: '📄', path: '/employer/documents' },
                 { name: 'Audit log', icon: '📋', path: '/employer/audit' },

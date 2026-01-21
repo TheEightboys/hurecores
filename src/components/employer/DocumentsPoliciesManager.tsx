@@ -294,7 +294,7 @@ const DocumentsPoliciesManager: React.FC = () => {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">File *</label>
                                 <input
                                     type="file"
-                                    accept=".pdf,.doc,.docx,.txt"
+                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.gif,.bmp,.svg,.zip,.rar,.7z"
                                     onChange={(e) => setUploadForm({ ...uploadForm, file: e.target.files?.[0] || null })}
                                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
                                 />
@@ -303,7 +303,9 @@ const DocumentsPoliciesManager: React.FC = () => {
                                         {uploadForm.file.name} ({(uploadForm.file.size / 1024).toFixed(1)} KB)
                                     </p>
                                 )}
+                                <p className="text-xs text-slate-400 mt-1">Supported: PDF, Word, Excel, PowerPoint, Images, Archives, and more</p>
                             </div>
+
 
                             {/* Assign To */}
                             <div>

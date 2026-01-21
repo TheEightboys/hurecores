@@ -44,6 +44,11 @@ const DEFAULT_KENYA_RULES: Omit<StatutoryRules, 'id' | 'updatedAt'> = {
     // NSSF rates
     nssfEmployeeRate: 0.06,
     nssfEmployerRate: 0.06,
+    nssfTier1Limit: 6000,
+    nssfTier2Limit: 18000,
+
+    // Personal Relief
+    personalRelief: 2400,
 
     // NHDF rate
     nhdfRate: 0.015,
@@ -167,8 +172,11 @@ export const statutoryRulesService = {
             nssfEmployeeRate?: number;
             nssfEmployerRate?: number;
             nssfCap?: number;
+            nssfTier1Limit?: number;
+            nssfTier2Limit?: number;
             nhdfRate?: number;
             shaRate?: number;
+            personalRelief?: number;
             effectiveFrom?: string;
             notes?: string;
         }
@@ -197,8 +205,11 @@ export const statutoryRulesService = {
                 nssfEmployeeRate: updates.nssfEmployeeRate ?? currentRules.nssfEmployeeRate,
                 nssfEmployerRate: updates.nssfEmployerRate ?? currentRules.nssfEmployerRate,
                 nssfCap: updates.nssfCap,
+                nssfTier1Limit: updates.nssfTier1Limit ?? currentRules.nssfTier1Limit ?? 6000,
+                nssfTier2Limit: updates.nssfTier2Limit ?? currentRules.nssfTier2Limit ?? 18000,
                 nhdfRate: updates.nhdfRate ?? currentRules.nhdfRate,
                 shaRate: updates.shaRate ?? currentRules.shaRate,
+                personalRelief: updates.personalRelief ?? currentRules.personalRelief ?? 2400,
                 updatedBy,
                 updatedByEmail,
                 updatedAt: serverTimestamp(),
