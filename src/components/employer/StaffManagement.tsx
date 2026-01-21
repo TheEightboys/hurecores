@@ -318,6 +318,9 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
     const [staffTab, setStaffTab] = useState<'active' | 'inactive' | 'pendingReview'>('active');
     const [showSalary, setShowSalary] = useState(false);
     const [editingVettingId, setEditingVettingId] = useState<string | null>(null);
+    const [editingOnboardingId, setEditingOnboardingId] = useState<string | null>(null);
+    const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
+    const [editingInviteId, setEditingInviteId] = useState<string | null>(null);
 
     const [formData, setFormData] = useState<CreateStaffInput>({
         email: '',
@@ -511,6 +514,11 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
         } else {
             alert(result.error);
         }
+    };
+
+    // Open edit/review modal with staff data - uses openEditModal for full editing
+    const handleEditStaff = (member: Profile) => {
+        openEditModal(member);
     };
 
     const resetForm = () => {
@@ -724,6 +732,54 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
         }
     };
 
+    // Inline handler for Onboarding status update
+    const handleInlineOnboardingUpdate = async (staffId: string, status: 'Completed' | 'In progress' | 'Not started') => {
+        if (!user?.organizationId) return;
+
+        const result = await staffService.update(staffId, {
+            onboardingStatus: status
+        }, user.organizationId);
+
+        if (result.success) {
+            loadData();
+            setEditingOnboardingId(null);
+        } else {
+            alert(result.error || 'Failed to update onboarding status');
+        }
+    };
+
+    // Inline handler for Account status (staffStatus) update
+    const handleInlineAccountUpdate = async (staffId: string, status: StaffStatus) => {
+        if (!user?.organizationId) return;
+
+        const result = await staffService.update(staffId, {
+            staffStatus: status
+        }, user.organizationId);
+
+        if (result.success) {
+            loadData();
+            setEditingAccountId(null);
+        } else {
+            alert(result.error || 'Failed to update account status');
+        }
+    };
+
+    // Inline handler for Invite status update
+    const handleInlineInviteUpdate = async (staffId: string, status: 'Active' | 'Pending' | 'None') => {
+        if (!user?.organizationId) return;
+
+        const result = await staffService.update(staffId, {
+            inviteStatus: status
+        }, user.organizationId);
+
+        if (result.success) {
+            loadData();
+            setEditingInviteId(null);
+        } else {
+            alert(result.error || 'Failed to update invite status');
+        }
+    };
+
     const [showExpiredOnly, setShowExpiredOnly] = useState(false);
 
     //Filter staff based on tab and location
@@ -732,7 +788,24 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
             // Always exclude archived staff
             if (s.staffStatus === 'Archived') return false;
 
-            // Filter for expired licenses if banner button clicked
+            // Filter based on active/inactive tab
+            if (staffTab === 'active') {
+                if (s.staffStatus === 'Inactive') return false;
+
+                // Active tab filters
+                const isAllLocations = !selectedLocationId || selectedLocationId === 'all';
+                if (!isAllLocations && s.locationId !== selectedLocationId) return false;
+
+                if (showExpiredOnly && !isLicenseExpired(s.license?.expiryDate)) return false;
+
+            } else if (staffTab === 'inactive') {
+                // Inactive tab: show only Inactive staff
+                // SKIP location/expired filters to ensure they are always findable
+                if (s.staffStatus !== 'Inactive') return false;
+            } else if (staffTab === 'pendingReview') {
+                if (s.staffStatus === 'Inactive' || s.staffStatus === 'Archived') return false;
+            }
+
             return true;
         });
     }, [staff, selectedLocationId, staffTab, showExpiredOnly]);
@@ -851,23 +924,110 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                 <span className="text-slate-400">-</span>
                                             )}
                                         </td>
+                                        {/* Onboarding Status - Clickable Dropdown */}
                                         <td className="px-4 py-4">
-                                            <OnboardingBadge status={member.onboardingStatus || (member.staffStatus === 'Active' ? 'Completed' : 'Not started')} />
+                                            {editingOnboardingId === member.id ? (
+                                                <select
+                                                    autoFocus
+                                                    value={member.onboardingStatus || 'Not started'}
+                                                    onChange={(e) => handleInlineOnboardingUpdate(member.id, e.target.value as any)}
+                                                    onBlur={() => setEditingOnboardingId(null)}
+                                                    className="px-2 py-1 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="Not started">Not started</option>
+                                                    <option value="In progress">In progress</option>
+                                                    <option value="Completed">Completed</option>
+                                                </select>
+                                            ) : (
+                                                <button
+                                                    onClick={() => setEditingOnboardingId(member.id)}
+                                                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                                                    title="Click to change onboarding status"
+                                                >
+                                                    <OnboardingBadge status={member.onboardingStatus || (member.staffStatus === 'Active' ? 'Completed' : 'Not started')} />
+                                                </button>
+                                            )}
                                         </td>
+                                        {/* Vetting Status - Clickable Dropdown */}
                                         <td className="px-4 py-4">
-                                            <VettingBadge status={member.vettingStatus || (member.license?.verificationStatus === 'Verified' ? 'Verified' : 'Not started')} />
+                                            {editingVettingId === member.id ? (
+                                                <select
+                                                    autoFocus
+                                                    value={member.vettingStatus || 'Not started'}
+                                                    onChange={(e) => handleInlineVettingUpdate(member.id, e.target.value as any)}
+                                                    onBlur={() => setEditingVettingId(null)}
+                                                    className="px-2 py-1 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="Not started">Not started</option>
+                                                    <option value="In progress">In progress</option>
+                                                    <option value="Pending review">Pending review</option>
+                                                    <option value="Verified">Verified</option>
+                                                </select>
+                                            ) : (
+                                                <button
+                                                    onClick={() => setEditingVettingId(member.id)}
+                                                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                                                    title="Click to change vetting status"
+                                                >
+                                                    <VettingBadge status={member.vettingStatus || (member.license?.verificationStatus === 'Verified' ? 'Verified' : 'Not started')} />
+                                                </button>
+                                            )}
                                         </td>
+                                        {/* Account Status - Clickable Dropdown */}
                                         <td className="px-4 py-4">
-                                            <SimpleBadge
-                                                label={member.staffStatus}
-                                                type={member.staffStatus === 'Active' ? 'success' : 'neutral'}
-                                            />
+                                            {editingAccountId === member.id ? (
+                                                <select
+                                                    autoFocus
+                                                    value={member.staffStatus}
+                                                    onChange={(e) => handleInlineAccountUpdate(member.id, e.target.value as StaffStatus)}
+                                                    onBlur={() => setEditingAccountId(null)}
+                                                    className="px-2 py-1 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="Active">Active</option>
+                                                    <option value="Inactive">Inactive</option>
+                                                    <option value="Invited">Invited</option>
+                                                    <option value="On Leave">On Leave</option>
+                                                    <option value="Terminated">Terminated</option>
+                                                </select>
+                                            ) : (
+                                                <button
+                                                    onClick={() => setEditingAccountId(member.id)}
+                                                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                                                    title="Click to change account status"
+                                                >
+                                                    <SimpleBadge
+                                                        label={member.staffStatus}
+                                                        type={member.staffStatus === 'Active' ? 'success' : member.staffStatus === 'Inactive' ? 'neutral' : 'warning'}
+                                                    />
+                                                </button>
+                                            )}
                                         </td>
+                                        {/* Invite Status - Clickable Dropdown */}
                                         <td className="px-4 py-4">
-                                            <SimpleBadge
-                                                label={member.inviteStatus || (member.staffStatus === 'Invited' ? 'Pending' : 'None')}
-                                                type={member.staffStatus === 'Invited' ? 'warning' : 'neutral'}
-                                            />
+                                            {editingInviteId === member.id ? (
+                                                <select
+                                                    autoFocus
+                                                    value={member.inviteStatus || 'None'}
+                                                    onChange={(e) => handleInlineInviteUpdate(member.id, e.target.value as any)}
+                                                    onBlur={() => setEditingInviteId(null)}
+                                                    className="px-2 py-1 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="None">None</option>
+                                                    <option value="Pending">Pending</option>
+                                                    <option value="Active">Active</option>
+                                                </select>
+                                            ) : (
+                                                <button
+                                                    onClick={() => setEditingInviteId(member.id)}
+                                                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                                                    title="Click to change invite status"
+                                                >
+                                                    <SimpleBadge
+                                                        label={member.inviteStatus || (member.staffStatus === 'Invited' ? 'Pending' : 'None')}
+                                                        type={member.inviteStatus === 'Active' ? 'success' : member.inviteStatus === 'Pending' ? 'warning' : 'neutral'}
+                                                    />
+                                                </button>
+                                            )}
                                         </td>
                                         <td className="px-4 py-4">
                                             <div className="flex gap-2">
@@ -896,11 +1056,29 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                         <button disabled className="px-3 py-1 bg-slate-50 text-slate-400 rounded text-xs font-bold cursor-not-allowed">WA</button>
                                                     </>
                                                 )}
+                                                {member.staffStatus === 'Inactive' ? (
+                                                    <button
+                                                        onClick={() => handleReactivate(member.id)}
+                                                        className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded text-xs font-bold hover:bg-emerald-100 transition"
+                                                    >
+                                                        Reactivate
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleDeactivate(member.id)}
+                                                        className="px-3 py-1 bg-slate-50 text-slate-600 rounded text-xs font-bold hover:bg-slate-100 transition"
+                                                    >
+                                                        Revoke
+                                                    </button>
+                                                )}
                                                 <button
-                                                    onClick={() => handleDeactivate(member.id)}
-                                                    className="px-3 py-1 bg-slate-50 text-slate-600 rounded text-xs font-bold hover:bg-slate-100 transition"
+                                                    onClick={() => {
+                                                        handleEditStaff(member);
+                                                    }}
+                                                    className="px-3 py-1 bg-amber-50 text-amber-600 rounded text-xs font-bold hover:bg-amber-100 transition"
+                                                    title="Edit staff details and license"
                                                 >
-                                                    Revoke
+                                                    Edit
                                                 </button>
                                                 <button
                                                     onClick={() => {
@@ -932,14 +1110,14 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                 </div>
 
                 {
-                    showAddModal && (
+                    (showAddModal || showEditModal) && (
                         <div ref={modalRef} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                             <div className="bg-white rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 my-8">
                                 <div className="sticky top-0 bg-white z-10 flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
                                     <h2 className="text-xl font-bold text-slate-900">
-                                        {inviteLink ? 'Invitation Sent!' : 'Add Staff Member'}
+                                        {showEditModal ? 'Edit Staff Member' : (inviteLink ? 'Invitation Sent!' : 'Add Staff Member')}
                                     </h2>
-                                    <button onClick={() => { setShowAddModal(false); resetForm(); }} className="text-slate-400 hover:text-slate-600">✕</button>
+                                    <button onClick={() => { setShowAddModal(false); setShowEditModal(false); resetForm(); }} className="text-slate-400 hover:text-slate-600">✕</button>
                                 </div>
 
                                 {inviteLink ? (
@@ -1007,7 +1185,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                             </div>
                                         )}
 
-                                        <form onSubmit={handleAddStaff} className="space-y-4">
+                                        <form onSubmit={showEditModal ? handleUpdateStaff : handleAddStaff} className="space-y-4">
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="block text-sm font-semibold text-slate-700 mb-2">First Name *</label>
@@ -1608,7 +1786,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                     <div className="flex space-x-3 mt-6">
                                         <button
                                             type="button"
-                                            onClick={() => { setShowEditModal(false); setSelectedStaff(null); resetForm(); }}
+                                            onClick={() => { setShowAddModal(false); setShowEditModal(false); setSelectedStaff(null); resetForm(); }}
                                             className="flex-1 py-3 border border-slate-300 rounded-xl font-semibold text-slate-700 hover:bg-slate-50"
                                         >
                                             Cancel
@@ -1617,7 +1795,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                             type="submit"
                                             className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700"
                                         >
-                                            Save Changes
+                                            {showEditModal ? 'Save Changes' : 'Add Staff'}
                                         </button>
                                     </div>
                                 </form>
