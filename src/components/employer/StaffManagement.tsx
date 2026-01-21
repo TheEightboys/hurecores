@@ -567,7 +567,12 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
             dailyRateCents: member.dailyRateCents || 0,
             shiftRateCents: member.shiftRateCents || 0,
             payMethod: member.payMethod,
-            permissions: member.permissions
+            permissions: member.permissions,
+            // Load license details
+            licenseType: member.license?.type || '',
+            licenseNumber: member.license?.number || '',
+            licenseAuthority: member.license?.authority || '',
+            licenseExpiry: member.license?.expiryDate || ''
         });
         setPendingPermissions(member.permissions || null);
         setShowEditModal(true);
@@ -606,6 +611,25 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
             }
         }
 
+        // Build the license object
+        const licenseData = formData.licenseType ? {
+            type: formData.licenseType,
+            number: formData.licenseNumber || '',
+            authority: formData.licenseAuthority || '',
+            expiryDate: formData.licenseExpiry || '',
+            verificationStatus: selectedStaff.license?.verificationStatus || 'Pending',
+            issuedDate: selectedStaff.license?.issuedDate || '',
+            documentUrl: licenseDocUrl
+        } : null;
+
+        // Debug: Log what we're saving
+        console.log('Saving staff update with license data:', {
+            staffId: selectedStaff.id,
+            formLicenseType: formData.licenseType,
+            formLicenseExpiry: formData.licenseExpiry,
+            licenseObject: licenseData
+        });
+
         const result = await staffService.update(selectedStaff.id, {
             firstName: formData.firstName,
             lastName: formData.lastName,
@@ -625,18 +649,11 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
             vettingStatus: formData.vettingStatus,
             inviteStatus: formData.inviteStatus,
             // Update license details
-            license: formData.licenseType ? {
-                type: formData.licenseType,
-                number: formData.licenseNumber || '',
-                authority: formData.licenseAuthority || '',
-                expiryDate: formData.licenseExpiry || '',
-                verificationStatus: selectedStaff.license?.verificationStatus || 'Pending', // Preserve existing status if any
-                issuedDate: selectedStaff.license?.issuedDate || '',
-                documentUrl: licenseDocUrl
-            } : null // Clear license if type is empty
+            license: licenseData
         }, user.organizationId);
 
         if (result.success) {
+            console.log('Staff update SUCCESS - license should now be saved');
             setShowEditModal(false);
             setSelectedStaff(null);
             resetForm();
@@ -912,17 +929,31 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                         <td className="px-4 py-4 text-slate-600">{member.systemRole}</td>
                                         <td className="px-4 py-4 text-slate-600">{member.jobTitle || '-'}</td>
                                         <td className="px-4 py-4">
-                                            {member.license?.type || '-'}
+                                            {member.license?.type || (member as any).licenseType || '-'}
                                         </td>
                                         <td className="px-4 py-4 text-slate-600">
-                                            {member.license?.number || '-'}
+                                            {member.license?.number || (member as any).licenseNumber || '-'}
                                         </td>
                                         <td className="px-4 py-4">
-                                            {member.license?.expiryDate ? (
-                                                <LicenseBadge expiry={member.license.expiryDate} />
-                                            ) : (
-                                                <span className="text-slate-400">-</span>
-                                            )}
+                                            {(() => {
+                                                const expiryDate = member.license?.expiryDate || (member as any).licenseExpiry;
+                                                if (!expiryDate) {
+                                                    return <span className="text-slate-400">-</span>;
+                                                }
+                                                const isExpired = new Date(expiryDate) < new Date();
+                                                return (
+                                                    <div className="flex flex-col">
+                                                        <span className={`text-sm ${isExpired ? 'text-red-600 font-semibold' : 'text-slate-700'}`}>
+                                                            {formatDateKE(expiryDate)}
+                                                        </span>
+                                                        {isExpired && (
+                                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mt-1 w-fit">
+                                                                Expired
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
                                         </td>
                                         {/* Onboarding Status - Clickable Dropdown */}
                                         <td className="px-4 py-4">
@@ -1112,7 +1143,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                 {
                     (showAddModal || showEditModal) && (
                         <div ref={modalRef} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                            <div className="bg-white rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 my-8">
+                            <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 my-8">
                                 <div className="sticky top-0 bg-white z-10 flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
                                     <h2 className="text-xl font-bold text-slate-900">
                                         {showEditModal ? 'Edit Staff Member' : (inviteLink ? 'Invitation Sent!' : 'Add Staff Member')}
@@ -1144,7 +1175,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                             </button>
                                         </div>
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="flex justify-center">
                                             <button
                                                 onClick={() => {
                                                     const message = `Hi ${formData.firstName}, you have been invited to join ${user?.email ? 'our team' : 'HURE Core'}. Using this link to accept the invitation: ${inviteLink}`;
@@ -1153,18 +1184,6 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                 className="flex items-center justify-center gap-3 px-6 py-4 bg-blue-50 text-blue-700 rounded-xl font-bold hover:bg-blue-100 transition-colors"
                                             >
                                                 <span className="text-xl">💬</span> Send via SMS
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    const message = `Hi ${formData.firstName}, please join using this link: ${inviteLink}`;
-                                                    // Handle phone number formatting for WhatsApp (remove spaces, strip + if double)
-                                                    // Assuming normalized phone from KenyaPhoneInput is e.g. +254...
-                                                    const waPhone = formData.phone.replace(/[^0-9]/g, '');
-                                                    window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(message)}`, '_blank');
-                                                }}
-                                                className="flex items-center justify-center gap-3 px-6 py-4 bg-green-50 text-green-700 rounded-xl font-bold hover:bg-green-100 transition-colors"
-                                            >
-                                                <span className="text-xl">📱</span> Send via WhatsApp
                                             </button>
                                         </div>
 
@@ -1186,52 +1205,52 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                         )}
 
                                         <form onSubmit={showEditModal ? handleUpdateStaff : handleAddStaff} className="space-y-4">
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                                                 <div>
-                                                    <label className="block text-sm font-semibold text-slate-700 mb-2">First Name *</label>
+                                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">First Name *</label>
                                                     <input
                                                         type="text"
                                                         required
                                                         value={formData.firstName}
                                                         onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                                                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Last Name *</label>
+                                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Last Name *</label>
                                                     <input
                                                         type="text"
                                                         required
                                                         value={formData.lastName}
                                                         onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                                                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                     />
                                                 </div>
-                                            </div>
 
-                                            <div>
-                                                <label className="block text-sm font-semibold text-slate-700 mb-2">Email *</label>
-                                                <input
-                                                    type="email"
-                                                    required
-                                                    value={formData.email}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                                                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                                                />
-                                            </div>
-
-                                            <KenyaPhoneInput
-                                                label="Phone Number"
-                                                value={formData.phone || ''}
-                                                onChange={(normalized, isValid) => {
-                                                    setFormData(prev => ({ ...prev, phone: normalized }));
-                                                    setPhoneValid(isValid);
-                                                }}
-                                            />
-
-                                            <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Job Title *</label>
+                                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email *</label>
+                                                    <input
+                                                        type="email"
+                                                        required
+                                                        value={formData.email}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <KenyaPhoneInput
+                                                        label="Phone Number"
+                                                        value={formData.phone || ''}
+                                                        onChange={(normalized, isValid) => {
+                                                            setFormData(prev => ({ ...prev, phone: normalized }));
+                                                            setPhoneValid(isValid);
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Job Title *</label>
                                                     <select
                                                         value={isCustomJobTitle ? 'Other (custom)' : (JOB_TITLES.includes(formData.jobTitle as any) ? formData.jobTitle : '')}
                                                         onChange={(e) => {
@@ -1243,7 +1262,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                                 setFormData(prev => ({ ...prev, jobTitle: e.target.value }));
                                                             }
                                                         }}
-                                                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                         required={!isCustomJobTitle}
                                                     >
                                                         <option value="">Select Job Title</option>
@@ -1256,38 +1275,36 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                             type="text"
                                                             value={formData.jobTitle}
                                                             onChange={(e) => setFormData(prev => ({ ...prev, jobTitle: e.target.value }))}
-                                                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 mt-2"
+                                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 mt-2 text-sm"
                                                             placeholder="Enter custom job title"
                                                             required
                                                         />
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-semibold text-slate-700 mb-2">System Role *</label>
+                                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">System Role *</label>
                                                     <select
                                                         value={formData.systemRole}
                                                         onChange={(e) => handleSystemRoleChange(e.target.value as SystemRole)}
-                                                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                     >
                                                         <option value="EMPLOYEE">Employee</option>
                                                         <option value="ADMIN">Admin</option>
                                                     </select>
                                                     <p className="text-xs text-[#94A3B8] mt-1">
-                                                        System role controls access. Only Admins and Owners consume admin seats.
+                                                        Only Admins consume admin seats.
                                                     </p>
                                                     {formData.systemRole === 'ADMIN' && formData.permissions && (
                                                         <p className="text-xs text-green-600 mt-1">✓ Permissions assigned</p>
                                                     )}
                                                 </div>
-                                            </div>
 
-                                            <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Employment Type *</label>
+                                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Employment Type *</label>
                                                     <select
                                                         value={formData.employmentType}
                                                         onChange={(e) => setFormData(prev => ({ ...prev, employmentType: e.target.value as EmploymentType }))}
-                                                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                     >
                                                         <option value="Full-Time">Full-Time</option>
                                                         <option value="Part-Time">Part-Time</option>
@@ -1297,11 +1314,11 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                     </select>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Location</label>
+                                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Location</label>
                                                     <select
                                                         value={formData.locationId}
                                                         onChange={(e) => setFormData(prev => ({ ...prev, locationId: e.target.value }))}
-                                                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                     >
                                                         <option value="">Select Location</option>
                                                         {locations.map(loc => (
@@ -1312,18 +1329,18 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                             </div>
 
                                             {/* License Credentials Section */}
-                                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mt-4">
                                                 <h3 className="text-sm font-bold text-blue-900 mb-1">Professional Credentials</h3>
-                                                <p className="text-xs text-slate-500 mb-4 flex items-start">
-                                                    License credentials can be updated later in the staff profile but is required for all clinical team professional.
+                                                <p className="text-xs text-slate-500 mb-3">
+                                                    License credentials can be updated later in the staff profile.
                                                 </p>
-                                                <div className="grid grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
                                                     <div>
-                                                        <label className="block text-sm font-semibold text-slate-700 mb-2">License Type</label>
+                                                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">License Type</label>
                                                         <select
                                                             value={formData.licenseType || ''}
                                                             onChange={(e) => setFormData(prev => ({ ...prev, licenseType: e.target.value }))}
-                                                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                         >
                                                             <option value="">Select License Type</option>
                                                             <option value="KMPDC">Medical License (KMPDC)</option>
@@ -1335,22 +1352,22 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                         </select>
                                                     </div>
                                                     <div>
-                                                        <label className="block text-sm font-semibold text-slate-700 mb-2">License Number</label>
+                                                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">License Number</label>
                                                         <input
                                                             type="text"
                                                             value={formData.licenseNumber || ''}
                                                             onChange={(e) => setFormData(prev => ({ ...prev, licenseNumber: e.target.value }))}
-                                                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                             placeholder="e.g., A12345"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-sm font-semibold text-slate-700 mb-2">Licensing Authority</label>
+                                                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Licensing Authority</label>
                                                         <input
                                                             type="text"
                                                             value={formData.licenseAuthority || ''}
                                                             onChange={(e) => setFormData(prev => ({ ...prev, licenseAuthority: e.target.value }))}
-                                                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                             placeholder="e.g., Medical Practitioners Board"
                                                         />
                                                     </div>
@@ -1361,8 +1378,8 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                             onChange={(value) => setFormData(prev => ({ ...prev, licenseExpiry: value }))}
                                                         />
                                                     </div>
-                                                    <div className="col-span-2">
-                                                        <label className="block text-sm font-semibold text-slate-700 mb-2">License Document</label>
+                                                    <div className="col-span-1 md:col-span-2">
+                                                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">License Document</label>
                                                         <input
                                                             type="file"
                                                             accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.doc,.docx,.xls,.xlsx"
@@ -1372,9 +1389,9 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                                 }
                                                             }}
                                                             className="w-full text-sm text-slate-500
-                                                file:mr-4 file:py-2 file:px-4
+                                                file:mr-4 file:py-1.5 file:px-3
                                                 file:rounded-full file:border-0
-                                                file:text-sm file:font-semibold
+                                                file:text-xs file:font-semibold
                                                 file:bg-blue-50 file:text-blue-700
                                                 hover:file:bg-blue-100"
                                                         />
@@ -1384,7 +1401,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                             </div>
 
                                             {/* Compensation fields based on employment type */}
-                                            <div className="flex justify-between items-center mt-6 mb-2">
+                                            <div className="flex justify-between items-center mt-4 mb-2">
                                                 <h3 className="text-sm font-bold text-slate-700">Compensation Details</h3>
                                                 <PrivacyToggle isVisible={showSalary} onToggle={() => setShowSalary(!showSalary)} label={showSalary ? 'Hide' : 'Show'} />
                                             </div>
@@ -1392,12 +1409,12 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                             {/* Full-Time: Monthly Salary only */}
                                             {formData.employmentType === 'Full-Time' && (
                                                 <div>
-                                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Monthly Salary (KES) <span className="font-normal text-slate-400">- Optional</span></label>
+                                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Monthly Salary (KES) <span className="font-normal text-slate-400">- Optional</span></label>
                                                     <input
                                                         type={showSalary ? "number" : "password"}
                                                         value={formData.monthlySalaryCents ? formData.monthlySalaryCents / 100 : ''}
                                                         onChange={(e) => setFormData(prev => ({ ...prev, monthlySalaryCents: Number(e.target.value) * 100 }))}
-                                                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                         placeholder={showSalary ? "e.g., 50000" : "••••••"}
                                                         readOnly={!showSalary}
                                                     />
@@ -1409,23 +1426,23 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                             {formData.employmentType === 'Part-Time' && (
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div>
-                                                        <label className="block text-sm font-semibold text-slate-700 mb-2">Monthly Salary (KES) <span className="font-normal text-slate-400">- Optional</span></label>
+                                                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Monthly Salary (KES) <span className="font-normal text-slate-400">- Optional</span></label>
                                                         <input
                                                             type={showSalary ? "number" : "password"}
                                                             value={formData.monthlySalaryCents ? formData.monthlySalaryCents / 100 : ''}
                                                             onChange={(e) => setFormData(prev => ({ ...prev, monthlySalaryCents: Number(e.target.value) * 100 }))}
-                                                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                             placeholder={showSalary ? "e.g., 25000" : "••••••"}
                                                             readOnly={!showSalary}
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-sm font-semibold text-slate-700 mb-2">Hourly Rate (KES) <span className="font-normal text-slate-400">- Optional</span></label>
+                                                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Hourly Rate (KES) <span className="font-normal text-slate-400">- Optional</span></label>
                                                         <input
                                                             type={showSalary ? "number" : "password"}
                                                             value={formData.hourlyRateCents ? formData.hourlyRateCents / 100 : ''}
                                                             onChange={(e) => setFormData(prev => ({ ...prev, hourlyRateCents: Number(e.target.value) * 100 }))}
-                                                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                             placeholder={showSalary ? "e.g., 500" : "••••••"}
                                                             readOnly={!showSalary}
                                                         />
@@ -1471,7 +1488,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                 {
                     showEditModal && selectedStaff && (
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto">
-                            <div className="bg-white rounded-2xl w-full max-w-xl p-6 m-4 my-8">
+                            <div className="bg-white rounded-2xl w-full max-w-4xl p-6 m-4 my-8 max-h-[90vh] overflow-y-auto">
                                 <div className="flex justify-between items-center mb-6">
                                     <h2 className="text-xl font-bold text-slate-900">Edit Staff Member</h2>
                                     <button onClick={() => { setShowEditModal(false); setSelectedStaff(null); resetForm(); }} className="text-slate-400 hover:text-slate-600">✕</button>
@@ -1485,38 +1502,38 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
 
                                 <form onSubmit={handleUpdateStaff} className="space-y-4">
                                     {/* Similar form fields as Add Modal */}
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                                         <div>
-                                            <label className="block text-sm font-semibold text-slate-700 mb-2">First Name</label>
+                                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">First Name</label>
                                             <input
                                                 type="text"
                                                 value={formData.firstName}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold text-slate-700 mb-2">Last Name</label>
+                                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Last Name</label>
                                             <input
                                                 type="text"
                                                 value={formData.lastName}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                             />
                                         </div>
-                                    </div>
 
-                                    <KenyaPhoneInput
-                                        label="Phone Number"
-                                        value={formData.phone || ''}
-                                        onChange={(normalized, isValid) => {
-                                            setFormData(prev => ({ ...prev, phone: normalized }));
-                                            setPhoneValid(isValid);
-                                        }}
-                                    />
-                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-semibold text-slate-700 mb-2">Job Title *</label>
+                                            <KenyaPhoneInput
+                                                label="Phone Number"
+                                                value={formData.phone || ''}
+                                                onChange={(normalized, isValid) => {
+                                                    setFormData(prev => ({ ...prev, phone: normalized }));
+                                                    setPhoneValid(isValid);
+                                                }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Job Title *</label>
                                             <select
                                                 value={isCustomJobTitle ? 'Other (custom)' : (JOB_TITLES.includes(formData.jobTitle as any) ? formData.jobTitle : '')}
                                                 onChange={(e) => {
@@ -1528,7 +1545,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                         setFormData(prev => ({ ...prev, jobTitle: e.target.value }));
                                                     }
                                                 }}
-                                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                 required={!isCustomJobTitle}
                                             >
                                                 <option value="">Select Job Title</option>
@@ -1541,40 +1558,38 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                     type="text"
                                                     value={formData.jobTitle}
                                                     onChange={(e) => setFormData(prev => ({ ...prev, jobTitle: e.target.value }))}
-                                                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 mt-2"
+                                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 mt-2 text-sm"
                                                     placeholder="Enter custom job title"
                                                     required
                                                 />
                                             )}
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold text-slate-700 mb-2">System Role *</label>
+                                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">System Role *</label>
                                             <select
                                                 value={formData.systemRole}
                                                 onChange={(e) => handleSystemRoleChange(e.target.value as SystemRole)}
                                                 disabled={selectedStaff.systemRole === 'OWNER'}
-                                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 text-sm"
                                             >
                                                 {selectedStaff.systemRole === 'OWNER' && <option value="OWNER">Owner</option>}
                                                 <option value="EMPLOYEE">Employee</option>
                                                 <option value="ADMIN">Admin</option>
                                             </select>
                                             <p className="text-xs text-[#94A3B8] mt-1">
-                                                System role controls access. Only Admins and Owners consume admin seats.
+                                                Only Admins consume admin seats.
                                             </p>
                                             {formData.systemRole === 'ADMIN' && formData.permissions && (
                                                 <p className="text-xs text-green-600 mt-1">✓ Permissions assigned</p>
                                             )}
                                         </div>
-                                    </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-semibold text-slate-700 mb-2">Employment Type *</label>
+                                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Employment Type *</label>
                                             <select
                                                 value={formData.employmentType}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, employmentType: e.target.value as EmploymentType }))}
-                                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                             >
                                                 <option value="Full-Time">Full-Time</option>
                                                 <option value="Part-Time">Part-Time</option>
@@ -1584,11 +1599,11 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold text-slate-700 mb-2">Location</label>
+                                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Location</label>
                                             <select
                                                 value={formData.locationId}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, locationId: e.target.value }))}
-                                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                             >
                                                 <option value="">Select Location</option>
                                                 {locations.map(loc => (
@@ -1599,18 +1614,18 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                     </div>
 
                                     {/* License Credentials Section - Added to Edit Modal */}
-                                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mt-4">
                                         <h3 className="text-sm font-bold text-blue-900 mb-1">Professional Credentials</h3>
-                                        <p className="text-xs text-slate-500 mb-4 flex items-start">
-                                            License credentials can be updated later in the staff profile but is required for all clinical team professional.
+                                        <p className="text-xs text-slate-500 mb-3">
+                                            License credentials can be updated later in the staff profile.
                                         </p>
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
                                             <div>
-                                                <label className="block text-sm font-semibold text-slate-700 mb-2">License Type</label>
+                                                <label className="block text-sm font-semibold text-slate-700 mb-1.5">License Type</label>
                                                 <select
                                                     value={formData.licenseType || ''}
                                                     onChange={(e) => setFormData(prev => ({ ...prev, licenseType: e.target.value }))}
-                                                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                 >
                                                     <option value="">Select License Type</option>
                                                     <option value="KMPDC">Medical License (KMPDC)</option>
@@ -1622,22 +1637,22 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                 </select>
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-semibold text-slate-700 mb-2">License Number</label>
+                                                <label className="block text-sm font-semibold text-slate-700 mb-1.5">License Number</label>
                                                 <input
                                                     type="text"
                                                     value={formData.licenseNumber || ''}
                                                     onChange={(e) => setFormData(prev => ({ ...prev, licenseNumber: e.target.value }))}
-                                                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                     placeholder="e.g., A12345"
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-semibold text-slate-700 mb-2">Licensing Authority</label>
+                                                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Licensing Authority</label>
                                                 <input
                                                     type="text"
                                                     value={formData.licenseAuthority || ''}
                                                     onChange={(e) => setFormData(prev => ({ ...prev, licenseAuthority: e.target.value }))}
-                                                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                     placeholder="e.g., Medical Practitioners Board"
                                                 />
                                             </div>
@@ -1648,8 +1663,8 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                     onChange={(value) => setFormData(prev => ({ ...prev, licenseExpiry: value }))}
                                                 />
                                             </div>
-                                            <div className="col-span-2">
-                                                <label className="block text-sm font-semibold text-slate-700 mb-2">License Document</label>
+                                            <div className="col-span-1 md:col-span-2">
+                                                <label className="block text-sm font-semibold text-slate-700 mb-1.5">License Document</label>
                                                 <input
                                                     type="file"
                                                     accept=".pdf,.jpg,.jpeg,.png"
@@ -1659,9 +1674,9 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                         }
                                                     }}
                                                     className="w-full text-sm text-slate-500
-                                                file:mr-4 file:py-2 file:px-4
+                                                file:mr-4 file:py-1.5 file:px-3
                                                 file:rounded-full file:border-0
-                                                file:text-sm file:font-semibold
+                                                file:text-xs file:font-semibold
                                                 file:bg-blue-50 file:text-blue-700
                                                 hover:file:bg-blue-100"
                                                 />
@@ -1671,15 +1686,15 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                     </div>
 
                                     {/* Status Management Section */}
-                                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 mt-4">
                                         <h3 className="text-sm font-bold text-slate-700 mb-3">Status Management</h3>
-                                        <div className="grid grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-3 gap-3">
                                             <div>
                                                 <label className="block text-xs font-semibold text-slate-500 mb-1">Onboarding Status</label>
                                                 <select
                                                     value={formData.onboardingStatus || 'Not started'}
                                                     onChange={(e) => setFormData(prev => ({ ...prev, onboardingStatus: e.target.value as any }))}
-                                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                                                    className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs"
                                                 >
                                                     <option value="Not started">Not started</option>
                                                     <option value="In progress">In progress</option>
@@ -1691,7 +1706,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                 <select
                                                     value={formData.vettingStatus || 'Not started'}
                                                     onChange={(e) => setFormData(prev => ({ ...prev, vettingStatus: e.target.value as any }))}
-                                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                                                    className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs"
                                                 >
                                                     <option value="Not started">Not started</option>
                                                     <option value="In progress">In progress</option>
@@ -1704,7 +1719,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                 <select
                                                     value={formData.inviteStatus || 'None'}
                                                     onChange={(e) => setFormData(prev => ({ ...prev, inviteStatus: e.target.value as any }))}
-                                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                                                    className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs"
                                                 >
                                                     <option value="None">None</option>
                                                     <option value="Pending">Pending</option>
@@ -1715,7 +1730,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                     </div>
 
                                     {/* Compensation fields based on employment type */}
-                                    <div className="flex justify-between items-center mt-6 mb-2">
+                                    <div className="flex justify-between items-center mt-4 mb-2">
                                         <h3 className="text-sm font-bold text-slate-700">Compensation Details</h3>
                                         <PrivacyToggle isVisible={showSalary} onToggle={() => setShowSalary(!showSalary)} label={showSalary ? 'Hide' : 'Show'} />
                                     </div>
@@ -1723,12 +1738,12 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                     {/* Full-Time: Monthly Salary only */}
                                     {formData.employmentType === 'Full-Time' && (
                                         <div>
-                                            <label className="block text-sm font-semibold text-slate-700 mb-2">Monthly Salary (KES) <span className="font-normal text-slate-400">- Optional</span></label>
+                                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Monthly Salary (KES) <span className="font-normal text-slate-400">- Optional</span></label>
                                             <input
                                                 type={showSalary ? "number" : "password"}
                                                 value={formData.monthlySalaryCents ? formData.monthlySalaryCents / 100 : ''}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, monthlySalaryCents: Number(e.target.value) * 100 }))}
-                                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                 placeholder={showSalary ? "e.g., 50000" : "••••••"}
                                                 readOnly={!showSalary}
                                             />
@@ -1740,23 +1755,23 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                     {formData.employmentType === 'Part-Time' && (
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-sm font-semibold text-slate-700 mb-2">Monthly Salary (KES) <span className="font-normal text-slate-400">- Optional</span></label>
+                                                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Monthly Salary (KES) <span className="font-normal text-slate-400">- Optional</span></label>
                                                 <input
                                                     type={showSalary ? "number" : "password"}
                                                     value={formData.monthlySalaryCents ? formData.monthlySalaryCents / 100 : ''}
                                                     onChange={(e) => setFormData(prev => ({ ...prev, monthlySalaryCents: Number(e.target.value) * 100 }))}
-                                                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                     placeholder={showSalary ? "e.g., 25000" : "••••••"}
                                                     readOnly={!showSalary}
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-semibold text-slate-700 mb-2">Hourly Rate (KES) <span className="font-normal text-slate-400">- Optional</span></label>
+                                                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Hourly Rate (KES) <span className="font-normal text-slate-400">- Optional</span></label>
                                                 <input
                                                     type={showSalary ? "number" : "password"}
                                                     value={formData.hourlyRateCents ? formData.hourlyRateCents / 100 : ''}
                                                     onChange={(e) => setFormData(prev => ({ ...prev, hourlyRateCents: Number(e.target.value) * 100 }))}
-                                                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                     placeholder={showSalary ? "e.g., 500" : "••••••"}
                                                     readOnly={!showSalary}
                                                 />
@@ -1767,7 +1782,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
 
                                     {/* Contract/Locum/External: No salary fields, show info message */}
                                     {(formData.employmentType === 'Contract' || formData.employmentType === 'Locum' || formData.employmentType === 'External') && (
-                                        <div className="bg-[#F1F5F9] p-4 rounded-xl border border-[#E2E8F0]">
+                                        <div className="bg-[#F1F5F9] p-3 rounded-xl border border-[#E2E8F0]">
                                             <p className="text-sm text-[#475569]">
                                                 💡 Compensation details are not required for {formData.employmentType} staff. You can configure payroll details later if needed.
                                             </p>

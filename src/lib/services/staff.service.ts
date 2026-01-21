@@ -53,14 +53,20 @@ export const staffService = {
         const data = doc.data();
         const profile: Profile = { id: doc.id, ...data } as Profile;
 
-        // Normalize license data: Map flat fields to nested object if needed
-        if (!profile.license && (data.licenseType || data.licenseNumber)) {
+        // Normalize license data: Always ensure license object is complete
+        // Check for either nested license object OR flat fields
+        const hasLicenseData = data.license || data.licenseType || data.licenseNumber || data.licenseExpiry;
+
+        if (hasLicenseData) {
+          // Merge nested and flat data, prioritizing nested if it exists
           profile.license = {
-            type: data.licenseType || '',
-            number: data.licenseNumber || '',
-            authority: data.licenseAuthority || '',
-            expiryDate: data.licenseExpiry || '',
-            verificationStatus: data.vettingStatus === 'Verified' ? 'Verified' : 'Pending'
+            type: data.license?.type || data.licenseType || '',
+            number: data.license?.number || data.licenseNumber || '',
+            authority: data.license?.authority || data.licenseAuthority || '',
+            expiryDate: data.license?.expiryDate || data.licenseExpiry || '',
+            verificationStatus: data.license?.verificationStatus || (data.vettingStatus === 'Verified' ? 'Verified' : 'Pending'),
+            issuedDate: data.license?.issuedDate || '',
+            documentUrl: data.license?.documentUrl || data.licenseDocumentUrl || ''
           };
         }
 
@@ -459,9 +465,21 @@ export const staffService = {
         }
       }
 
+      // Handle license data - store both nested object AND flat fields for compatibility
+      const updatePayload: any = { ...updates };
+
+      // If license is provided, also save as flat fields for backward compatibility
+      if (updates.license) {
+        updatePayload.licenseType = updates.license.type || null;
+        updatePayload.licenseNumber = updates.license.number || null;
+        updatePayload.licenseAuthority = updates.license.authority || null;
+        updatePayload.licenseExpiry = updates.license.expiryDate || null;
+        updatePayload.licenseDocumentUrl = updates.license.documentUrl || null;
+      }
+
       // Filter out undefined values to avoid Firestore errors
       const cleanUpdates = Object.fromEntries(
-        Object.entries(updates).filter(([_, value]) => value !== undefined)
+        Object.entries(updatePayload).filter(([_, value]) => value !== undefined)
       );
 
       await updateDoc(docs.user(userId), {
