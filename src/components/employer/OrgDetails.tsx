@@ -199,15 +199,19 @@ const OrgDetails: React.FC<{ selectedLocationId?: string }> = ({ selectedLocatio
         return statusMap[status] || statusMap['Trial'];
     };
 
-    // Apply filtering
+    // Apply filtering - strict exact match by ID
     const visibleLocations = (selectedLocationId && selectedLocationId !== 'all')
-        ? locations.filter(l => l.id === selectedLocationId)
+        ? locations.filter(l => {
+            const isMatch = l.id === selectedLocationId;
+            console.log('[DEBUG Filter] Comparing:', { locId: l.id, selectedId: selectedLocationId, locName: l.name, isMatch });
+            return isMatch;
+        })
         : locations;
 
-    // DEBUG: Log filtering
-    console.log('[DEBUG OrgDetails] selectedLocationId:', selectedLocationId);
-    console.log('[DEBUG OrgDetails] locations:', locations.map(l => ({ id: l.id, name: l.name, city: l.city })));
-    console.log('[DEBUG OrgDetails] visibleLocations:', visibleLocations.map(l => ({ id: l.id, name: l.name })));
+    // DEBUG: Log filtering results
+    console.log('[DEBUG OrgDetails] Prop selectedLocationId:', selectedLocationId, 'type:', typeof selectedLocationId);
+    console.log('[DEBUG OrgDetails] All locations:', locations.map(l => ({ id: l.id, name: l.name })));
+    console.log('[DEBUG OrgDetails] Filtered visibleLocations:', visibleLocations.length, 'items:', visibleLocations.map(l => l.name));
 
     // Compliance summary
     const complianceSummary = {
