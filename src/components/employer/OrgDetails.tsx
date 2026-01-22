@@ -204,6 +204,11 @@ const OrgDetails: React.FC<{ selectedLocationId?: string }> = ({ selectedLocatio
         ? locations.filter(l => l.id === selectedLocationId)
         : locations;
 
+    // DEBUG: Log filtering
+    console.log('[DEBUG OrgDetails] selectedLocationId:', selectedLocationId);
+    console.log('[DEBUG OrgDetails] locations:', locations.map(l => ({ id: l.id, name: l.name, city: l.city })));
+    console.log('[DEBUG OrgDetails] visibleLocations:', visibleLocations.map(l => ({ id: l.id, name: l.name })));
+
     // Compliance summary
     const complianceSummary = {
         org: org?.orgStatus === 'Verified',

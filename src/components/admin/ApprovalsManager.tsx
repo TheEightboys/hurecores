@@ -147,6 +147,19 @@ const ApprovalsManager: React.FC<ApprovalsManagerProps> = ({ initialFilter = 'Pe
                 for (const locDoc of locsSnap.docs) {
                     const data = locDoc.data();
 
+                    // DEBUG: Log location data to verify field names
+                    console.log('[DEBUG] Location data:', locDoc.id, {
+                        name: data.name,
+                        licenseNumber: data.licenseNumber,
+                        licensingBody: data.licensingBody,
+                        licenseExpiry: data.licenseExpiry,
+                        licenseDocumentUrl: data.licenseDocumentUrl,
+                        // Check alternate field names
+                        license: data.license,
+                        identifier: data.identifier,
+                        authority: data.authority
+                    });
+
                     // Check if facility has verification request
                     const verQuery = query(
                         collection(db, 'verificationRequests'),
@@ -159,10 +172,10 @@ const ApprovalsManager: React.FC<ApprovalsManagerProps> = ({ initialFilter = 'Pe
 
                     // First, get license info from location data (source of truth)
                     let licenseInfo = {
-                        licenseNumber: data.licenseNumber || '',
-                        licensingBody: data.licensingBody || '',
-                        licenseDocumentUrl: data.licenseDocumentUrl || '',
-                        expiryDate: data.licenseExpiry || ''
+                        licenseNumber: data.licenseNumber || data.license?.number || '',
+                        licensingBody: data.licensingBody || data.license?.body || '',
+                        licenseDocumentUrl: data.licenseDocumentUrl || data.license?.documentUrl || '',
+                        expiryDate: data.licenseExpiry || data.license?.expiry || ''
                     };
 
                     if (!verSnap.empty) {
