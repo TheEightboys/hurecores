@@ -20,6 +20,7 @@ import {
     Timestamp
 } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
+import { storageService } from '../../lib/services/storage.service';
 import type { ApprovalStatus } from '../../types';
 
 // =====================================================
@@ -257,6 +258,29 @@ const ApprovalsManager: React.FC<ApprovalsManagerProps> = ({ initialFilter = 'Pe
         } finally {
             setActionLoading(false);
         }
+    };
+
+    // Handler to view document with signed URL
+    const handleViewDocument = async (documentUrl: string) => {
+        if (!documentUrl) {
+            alert('No document URL available');
+            return;
+        }
+
+        // Extract path from public URL
+        const path = storageService.extractPathFromUrl(documentUrl);
+
+        if (path) {
+            // Try to generate signed URL for secure access
+            const result = await storageService.getSignedUrl(path, 'documents', 3600);
+            if (result.success && result.url) {
+                window.open(result.url, '_blank');
+                return;
+            }
+        }
+
+        // Fallback to original URL
+        window.open(documentUrl, '_blank');
     };
 
     const handleRejectOrg = async () => {
@@ -621,17 +645,26 @@ const ApprovalsManager: React.FC<ApprovalsManagerProps> = ({ initialFilter = 'Pe
 
                                                 {/* Quick Actions */}
                                                 <div className="flex gap-2">
-                                                    {org.businessRegistrationDocUrl && (
-                                                        <a
-                                                            href={org.businessRegistrationDocUrl}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            className="text-blue-600 text-xs font-medium hover:underline"
-                                                        >
-                                                            View Documents (0) →
-                                                        </a>
-                                                    )}
+                                                    {(() => {
+                                                        // Count available documents
+                                                        const docCount = [org.businessRegistrationDocUrl, org.kraPinDocUrl].filter(Boolean).length;
+                                                        if (docCount > 0) {
+                                                            return (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setSelectedOrg(org);
+                                                                    }}
+                                                                    className="text-blue-600 text-xs font-medium hover:underline"
+                                                                >
+                                                                    View Documents ({docCount}) →
+                                                                </button>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <span className="text-slate-400 text-xs">No documents</span>
+                                                        );
+                                                    })()}
                                                 </div>
 
                                                 {org.approvalStatus === 'Pending Review' && (
@@ -708,6 +741,23 @@ const ApprovalsManager: React.FC<ApprovalsManagerProps> = ({ initialFilter = 'Pe
                                                     {facility.approvalStatus}
                                                 </span>
 
+                                                {/* View Documents Link for Facilities */}
+                                                <div className="flex gap-2">
+                                                    {facility.licenseDocUrl ? (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedFacility(facility);
+                                                            }}
+                                                            className="text-blue-600 text-xs font-medium hover:underline"
+                                                        >
+                                                            View Documents (1) →
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-slate-400 text-xs">No documents</span>
+                                                    )}
+                                                </div>
+
                                                 {facility.approvalStatus === 'Pending Review' && (
                                                     <div className="flex gap-2 mt-2">
                                                         <button
@@ -777,28 +827,24 @@ const ApprovalsManager: React.FC<ApprovalsManagerProps> = ({ initialFilter = 'Pe
                             <span className="text-slate-500 font-medium">Verification Documents</span>
                             <div className="mt-2 space-y-2">
                                 {selectedOrg.businessRegistrationDocUrl ? (
-                                    <a
-                                        href={selectedOrg.businessRegistrationDocUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex justify-between items-center p-2 bg-slate-50 rounded-lg hover:bg-slate-100"
+                                    <button
+                                        onClick={() => handleViewDocument(selectedOrg.businessRegistrationDocUrl!)}
+                                        className="flex justify-between items-center p-2 bg-slate-50 rounded-lg hover:bg-slate-100 w-full text-left"
                                     >
                                         <span className="text-slate-700">Business Registration</span>
                                         <span className="text-blue-600 font-medium">View →</span>
-                                    </a>
+                                    </button>
                                 ) : (
                                     <p className="text-slate-400 italic">No documents uploaded</p>
                                 )}
                                 {selectedOrg.kraPinDocUrl && (
-                                    <a
-                                        href={selectedOrg.kraPinDocUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex justify-between items-center p-2 bg-slate-50 rounded-lg hover:bg-slate-100"
+                                    <button
+                                        onClick={() => handleViewDocument(selectedOrg.kraPinDocUrl!)}
+                                        className="flex justify-between items-center p-2 bg-slate-50 rounded-lg hover:bg-slate-100 w-full text-left"
                                     >
                                         <span className="text-slate-700">KRA PIN Certificate</span>
                                         <span className="text-blue-600 font-medium">View →</span>
-                                    </a>
+                                    </button>
                                 )}
                             </div>
                         </div>
@@ -848,6 +894,88 @@ const ApprovalsManager: React.FC<ApprovalsManagerProps> = ({ initialFilter = 'Pe
                                 className="w-full py-2 bg-red-100 text-red-700 font-medium rounded-lg hover:bg-red-200"
                             >
                                 Suspend Organization
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Detail Panel - Facility */}
+            {selectedFacility && (
+                <div className="w-96 bg-white rounded-2xl border border-slate-200 p-6 h-fit sticky top-8">
+                    <div className="flex justify-between items-start mb-6">
+                        <div>
+                            <h3 className="text-lg font-bold text-slate-900">{selectedFacility.name}</h3>
+                            <p className="text-sm text-slate-500">Parent: {selectedFacility.organizationName}</p>
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold uppercase mt-1 ${getStatusBadge(selectedFacility.approvalStatus)}`}>
+                                {selectedFacility.approvalStatus}
+                            </span>
+                        </div>
+                        <button onClick={() => setSelectedFacility(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+                    </div>
+
+                    <div className="space-y-4 text-sm">
+                        <div>
+                            <span className="text-slate-500">Location</span>
+                            <p className="font-semibold text-slate-900">{selectedFacility.city || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <span className="text-slate-500">Phone</span>
+                            <p className="font-semibold text-slate-900">{selectedFacility.phone || 'Not provided'}</p>
+                        </div>
+                        <div>
+                            <span className="text-slate-500">License Number</span>
+                            <p className="font-semibold text-slate-900">{selectedFacility.licenseNumber || 'Not provided'}</p>
+                        </div>
+                        <div>
+                            <span className="text-slate-500">Licensing Body</span>
+                            <p className="font-semibold text-slate-900">{selectedFacility.licensingBody || 'Not provided'}</p>
+                        </div>
+                        {selectedFacility.expiryDate && (
+                            <div>
+                                <span className="text-slate-500">License Expiry</span>
+                                <p className="font-semibold text-slate-900">{selectedFacility.expiryDate}</p>
+                            </div>
+                        )}
+
+                        {/* Documents */}
+                        <div className="pt-4 border-t border-slate-100">
+                            <span className="text-slate-500 font-medium">Facility Documents</span>
+                            <div className="mt-2 space-y-2">
+                                {selectedFacility.licenseDocUrl ? (
+                                    <button
+                                        onClick={() => handleViewDocument(selectedFacility.licenseDocUrl!)}
+                                        className="flex justify-between items-center p-2 bg-slate-50 rounded-lg hover:bg-slate-100 w-full text-left"
+                                    >
+                                        <span className="text-slate-700">📄 License Document</span>
+                                        <span className="text-blue-600 font-medium">View →</span>
+                                    </button>
+                                ) : (
+                                    <p className="text-slate-400 italic">No documents uploaded</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="mt-6 pt-4 border-t border-slate-100 flex gap-3">
+                        {selectedFacility.approvalStatus === 'Pending Review' && (
+                            <button
+                                onClick={() => handleApproveFacility(selectedFacility)}
+                                disabled={actionLoading}
+                                className="flex-1 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                            >
+                                Approve
+                            </button>
+                        )}
+
+                        {selectedFacility.approvalStatus === 'Approved' && (
+                            <button
+                                onClick={() => handleEnableFacility(selectedFacility)}
+                                disabled={actionLoading}
+                                className="flex-1 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                                Enable
                             </button>
                         )}
                     </div>

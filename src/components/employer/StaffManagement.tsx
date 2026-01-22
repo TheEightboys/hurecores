@@ -1103,15 +1103,6 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                 >
                                                     Edit
                                                 </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setSelectedReviewStaff(member);
-                                                        setShowReviewModal(true);
-                                                    }}
-                                                    className="px-3 py-1 bg-purple-50 text-purple-600 rounded text-xs font-bold hover:bg-purple-100 transition"
-                                                >
-                                                    Review Vetting
-                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -1121,7 +1112,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                         {
                             visibleStaff.length === 0 && (
                                 <div className="p-12 text-center text-slate-500">
-                                    No staff found.
+                                    No staff found at this location.
                                 </div>
                             )
                         }
@@ -1320,74 +1311,76 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ selectedLocationId })
                                                 </div>
                                             </div>
 
-                                            {/* License Credentials Section - Collapsible */}
+                                            {/* License Credentials Section - Collapsible with 2-column layout */}
                                             <details className="bg-blue-50 border border-blue-200 rounded-xl mt-3">
                                                 <summary className="p-3 cursor-pointer text-sm font-bold text-blue-900 flex justify-between items-center">
                                                     Professional Credentials
-                                                    <span className="text-xs font-normal text-slate-500">Tap to expand</span>
+                                                    <span className="text-xs font-normal text-slate-500">License credentials can be updated later in the staff profile but is required for all clinical team professionals.</span>
                                                 </summary>
-                                                <div className="p-3 pt-0">
-                                                    <div>
-                                                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">License Type</label>
-                                                        <select
-                                                            value={formData.licenseType || ''}
-                                                            onChange={(e) => setFormData(prev => ({ ...prev, licenseType: e.target.value }))}
-                                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                                                        >
-                                                            <option value="">Select License Type</option>
-                                                            <option value="KMPDC">Medical License (KMPDC)</option>
-                                                            <option value="NCK">Nursing License (NCK)</option>
-                                                            <option value="CDK">Clinical Officer (CDK)</option>
-                                                            <option value="PPB">Pharmacy License (PPB)</option>
-                                                            <option value="KMLTB">Lab Tech License (KMLTB)</option>
-                                                            <option value="Other">Other</option>
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">License Number</label>
-                                                        <input
-                                                            type="text"
-                                                            value={formData.licenseNumber || ''}
-                                                            onChange={(e) => setFormData(prev => ({ ...prev, licenseNumber: e.target.value }))}
-                                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                                                            placeholder="e.g., A12345"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Licensing Authority</label>
-                                                        <input
-                                                            type="text"
-                                                            value={formData.licenseAuthority || ''}
-                                                            onChange={(e) => setFormData(prev => ({ ...prev, licenseAuthority: e.target.value }))}
-                                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                                                            placeholder="e.g., Medical Practitioners Board"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <DateInput
-                                                            label="License Expiry Date"
-                                                            value={formData.licenseExpiry || ''}
-                                                            onChange={(value) => setFormData(prev => ({ ...prev, licenseExpiry: value }))}
-                                                        />
-                                                    </div>
-                                                    <div className="col-span-1 md:col-span-2">
-                                                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">License Document</label>
-                                                        <input
-                                                            type="file"
-                                                            accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.doc,.docx,.xls,.xlsx"
-                                                            onChange={(e) => {
-                                                                if (e.target.files && e.target.files[0]) {
-                                                                    setLicenseFile(e.target.files[0]);
-                                                                }
-                                                            }}
-                                                            className="w-full text-sm text-slate-500
-                                                file:mr-4 file:py-1.5 file:px-3
+                                                <div className="p-3 pt-2">
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="block text-xs font-semibold text-slate-700 mb-1">License Type</label>
+                                                            <select
+                                                                value={formData.licenseType || ''}
+                                                                onChange={(e) => setFormData(prev => ({ ...prev, licenseType: e.target.value }))}
+                                                                className="w-full px-2 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                                            >
+                                                                <option value="">Select License Type</option>
+                                                                <option value="KMPDC">Medical License (KMPDC)</option>
+                                                                <option value="NCK">Nursing License (NCK)</option>
+                                                                <option value="CDK">Clinical Officer (CDK)</option>
+                                                                <option value="PPB">Pharmacy License (PPB)</option>
+                                                                <option value="KMLTB">Lab Tech License (KMLTB)</option>
+                                                                <option value="Other">Other</option>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-xs font-semibold text-slate-700 mb-1">License Number</label>
+                                                            <input
+                                                                type="text"
+                                                                value={formData.licenseNumber || ''}
+                                                                onChange={(e) => setFormData(prev => ({ ...prev, licenseNumber: e.target.value }))}
+                                                                className="w-full px-2 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                                                placeholder="e.g., A12345"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-xs font-semibold text-slate-700 mb-1">Licensing Authority</label>
+                                                            <input
+                                                                type="text"
+                                                                value={formData.licenseAuthority || ''}
+                                                                onChange={(e) => setFormData(prev => ({ ...prev, licenseAuthority: e.target.value }))}
+                                                                className="w-full px-2 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                                                placeholder="e.g., Medical Practitioners Board"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <DateInput
+                                                                label="License Expiry Date"
+                                                                value={formData.licenseExpiry || ''}
+                                                                onChange={(value) => setFormData(prev => ({ ...prev, licenseExpiry: value }))}
+                                                            />
+                                                        </div>
+                                                        <div className="col-span-2">
+                                                            <label className="block text-xs font-semibold text-slate-700 mb-1">License Document</label>
+                                                            <input
+                                                                type="file"
+                                                                accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.doc,.docx,.xls,.xlsx"
+                                                                onChange={(e) => {
+                                                                    if (e.target.files && e.target.files[0]) {
+                                                                        setLicenseFile(e.target.files[0]);
+                                                                    }
+                                                                }}
+                                                                className="w-full text-sm text-slate-500
+                                                file:mr-4 file:py-1 file:px-2
                                                 file:rounded-full file:border-0
                                                 file:text-xs file:font-semibold
                                                 file:bg-blue-50 file:text-blue-700
                                                 hover:file:bg-blue-100"
-                                                        />
-                                                        <p className="text-xs text-slate-400 mt-1">Upload PDF, Image, or Document (Max 5MB)</p>
+                                                            />
+                                                            <p className="text-xs text-slate-400 mt-0.5">Upload PDF or Image (Max 5MB)</p>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </details>

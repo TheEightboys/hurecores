@@ -16,6 +16,7 @@ interface StatutoryRules {
     housingLevyRate: number; // Percentage
     nssfTierILimit: number;
     nssfTierIILimit: number;
+    effectiveDate?: string; // When these rules take effect
 }
 
 const DEFAULT_RULES: StatutoryRules = {
@@ -32,7 +33,8 @@ const DEFAULT_RULES: StatutoryRules = {
     nssfTierII: 0.06,   // 6% of basic - Tier I
     housingLevyRate: 1.5,
     nssfTierILimit: 6000,
-    nssfTierIILimit: 18000
+    nssfTierIILimit: 18000,
+    effectiveDate: '2024-01-01'
 };
 
 const StatutoryRulesManager: React.FC = () => {
@@ -145,6 +147,16 @@ const StatutoryRulesManager: React.FC = () => {
                             onChange={e => setRules({ ...rules, shifRate: Number(e.target.value) })}
                             className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                         />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">Effective Date</label>
+                        <input
+                            type="date"
+                            value={rules.effectiveDate || ''}
+                            onChange={e => setRules({ ...rules, effectiveDate: e.target.value })}
+                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                        <p className="text-xs text-slate-400 mt-1">When these statutory rules take effect</p>
                     </div>
                 </div>
 

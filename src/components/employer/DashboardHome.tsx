@@ -209,7 +209,7 @@ const DashboardHome: React.FC = () => {
                         <div className="p-3 rounded-xl bg-[#F1F5F9] text-[#64748B] text-2xl group-hover:bg-[#2FB7A3]/10 transition-colors">💰</div>
                     </div>
                     <div className="text-3xl font-bold text-[#0F172A] mb-1">{payrollStatus.ready}</div>
-                    <div className="text-sm font-semibold text-[#475569]">Payroll Ready</div>
+                    <div className="text-sm font-semibold text-[#475569]">Payroll Status</div>
                     <div className="mt-3 flex items-center gap-3 text-xs">
                         <span className="text-[#94A3B8]">{payrollStatus.draft} Draft</span>
                         <span className="text-[#0f766e]">{payrollStatus.exported} Exported</span>
@@ -320,7 +320,7 @@ const DashboardHome: React.FC = () => {
                     <div className="bg-[#FAF7F2] rounded-3xl p-8 border border-[#E2E8F0]">
                         <h3 className="font-bold text-lg mb-2 text-[#0F172A]">💡 Pro Tip</h3>
                         <p className="text-[#475569] text-sm leading-relaxed mb-6">
-                            Complete your organization verification to unlock all features including scheduling, attendance tracking, and payroll management.
+                            Complete your organization verification to unlock all features including payroll management.
                         </p>
                         <a
                             href="#/employer/verification"

@@ -54,5 +54,44 @@ export const storageService = {
         } catch (error: any) {
             return { success: false, error: error.message };
         }
+    },
+
+    /**
+     * Get a signed URL for private file access
+     * @param path The path to the file
+     * @param bucket The bucket name
+     * @param expiresIn Expiry time in seconds (default: 1 hour)
+     */
+    async getSignedUrl(path: string, bucket: string = 'documents', expiresIn: number = 3600): Promise<{ success: boolean; url?: string; error?: string }> {
+        try {
+            const { data, error } = await supabase
+                .storage
+                .from(bucket)
+                .createSignedUrl(path, expiresIn);
+
+            if (error) {
+                console.error('Signed URL error:', error);
+                return { success: false, error: error.message };
+            }
+
+            return { success: true, url: data.signedUrl };
+        } catch (error: any) {
+            console.error('Storage service error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    /**
+     * Extract the storage path from a public URL
+     * Converts: https://xxx.supabase.co/storage/v1/object/public/documents/path/file.pdf
+     * To: path/file.pdf
+     */
+    extractPathFromUrl(url: string): string | null {
+        try {
+            const match = url.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)$/);
+            return match ? match[1] : null;
+        } catch {
+            return null;
+        }
     }
 };
