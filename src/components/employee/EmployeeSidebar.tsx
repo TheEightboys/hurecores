@@ -30,6 +30,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
         { name: 'My Attendance', path: '/employee/attendance', icon: '⏰' },
         { name: 'My Schedule', path: '/employee/schedule', icon: '📅' },
         { name: 'My Leave', path: '/employee/leave', icon: '🏖️' },
+        { name: 'My Pay History', path: '/employee/payslips', icon: '💸' },
         { name: 'My Profile', path: '/employee/profile', icon: '👤' },
     ];
 

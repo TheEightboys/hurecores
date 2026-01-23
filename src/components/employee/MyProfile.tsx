@@ -163,35 +163,35 @@ const MyProfile: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Practice Approval */}
+                    {/* Employment Assignment & Verification */}
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                         <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
                             <div className="flex items-center gap-3">
                                 <span className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-lg">✅</span>
-                                <h3 className="text-lg font-bold text-slate-900">Practice Approval</h3>
+                                <h3 className="text-lg font-bold text-slate-900">Employment Assignment & Verification</h3>
                             </div>
                             {getStatusBadge(practiceApproval?.organizationApproved ? 'Approved' : 'Pending')}
                         </div>
                         <div className="p-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Approved Organization</label>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Assigned Organization</label>
                                     <div className="font-semibold text-slate-900">Rusinga Nursing Home</div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Approved Location(s)</label>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Assigned Location(s)</label>
                                     <div className="font-semibold text-slate-900">Main Facility</div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Role at Facility</label>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Assigned Role</label>
                                     <div className="font-semibold text-slate-900">{safeProfile.jobTitle || 'Nurse'} (Full-Time)</div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Approval Status</label>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Verification Status</label>
                                     <div className="font-semibold text-emerald-700 font-bold">APPROVED ✓</div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Approved On</label>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Verified On</label>
                                     <div className="font-semibold text-slate-900">04 January 2026</div>
                                 </div>
                             </div>

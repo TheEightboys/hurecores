@@ -9,6 +9,7 @@ import MyAttendance from '../components/employee/MyAttendance';
 import MyLeave from '../components/employee/MyLeave';
 import MyProfile from '../components/employee/MyProfile';
 import MyDocuments from '../components/employee/MyDocuments';
+import MyPayslips from '../components/employee/MyPayslips';
 
 import ManagerDashboard from '../components/employee/ManagerDashboard';
 import ManagerSchedule from '../components/employee/ManagerSchedule';
@@ -59,6 +60,7 @@ const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({ user }) => {
                   <Route path="/schedule" element={<MySchedule />} />
                   <Route path="/attendance" element={<MyAttendance />} />
                   <Route path="/leave" element={<MyLeave />} />
+                  <Route path="/payslips" element={<MyPayslips />} />
                   <Route path="/documents" element={<MyDocuments />} />
                   <Route path="/profile" element={<MyProfile />} />
 

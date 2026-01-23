@@ -15,13 +15,15 @@ import type {
     AttendanceRules,
     LunchRules,
     BreakRules,
+    SchedulingRules,
     PolicyDocument,
     DocumentAcknowledgement
 } from '../../types';
 import {
     DEFAULT_ATTENDANCE_RULES,
     DEFAULT_LUNCH_RULES,
-    DEFAULT_BREAK_RULES
+    DEFAULT_BREAK_RULES,
+    DEFAULT_SCHEDULING_RULES
 } from '../../types';
 
 // =====================================================
@@ -41,7 +43,11 @@ export const settingsService = {
             );
 
             if (settingsDoc) {
-                return settingsDoc;
+                // Ensure new fields exist even in old docs
+                return {
+                    ...settingsDoc,
+                    scheduling: settingsDoc.scheduling || { ...DEFAULT_SCHEDULING_RULES }
+                };
             }
 
             // Return defaults if no settings exist
@@ -51,6 +57,7 @@ export const settingsService = {
                 attendance: { ...DEFAULT_ATTENDANCE_RULES },
                 lunch: { ...DEFAULT_LUNCH_RULES },
                 breaks: { ...DEFAULT_BREAK_RULES },
+                scheduling: { ...DEFAULT_SCHEDULING_RULES },
                 updatedAt: new Date().toISOString()
             };
         } catch (error) {
@@ -62,6 +69,7 @@ export const settingsService = {
                 attendance: { ...DEFAULT_ATTENDANCE_RULES },
                 lunch: { ...DEFAULT_LUNCH_RULES },
                 breaks: { ...DEFAULT_BREAK_RULES },
+                scheduling: { ...DEFAULT_SCHEDULING_RULES },
                 updatedAt: new Date().toISOString()
             };
         }
@@ -76,6 +84,7 @@ export const settingsService = {
             attendance: Partial<AttendanceRules>;
             lunch: Partial<LunchRules>;
             breaks: Partial<BreakRules>;
+            scheduling: Partial<SchedulingRules>;
         }>
     ): Promise<OrganizationSettings> {
         const currentSettings = await this.getSettings(organizationId);
@@ -85,6 +94,7 @@ export const settingsService = {
             attendance: { ...currentSettings.attendance, ...updates.attendance },
             lunch: { ...currentSettings.lunch, ...updates.lunch },
             breaks: { ...currentSettings.breaks, ...updates.breaks },
+            scheduling: { ...currentSettings.scheduling, ...updates.scheduling },
             updatedAt: serverTimestamp(),
             updatedBy: auth.currentUser?.uid || 'system'
         };
@@ -103,6 +113,7 @@ export const settingsService = {
             attendance: { ...DEFAULT_ATTENDANCE_RULES },
             lunch: { ...DEFAULT_LUNCH_RULES },
             breaks: { ...DEFAULT_BREAK_RULES },
+            scheduling: { ...DEFAULT_SCHEDULING_RULES },
             updatedAt: serverTimestamp(),
             updatedBy: auth.currentUser?.uid || 'system'
         };

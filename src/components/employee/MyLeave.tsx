@@ -76,9 +76,14 @@ const MyLeave: React.FC = () => {
 
             setEntitlements(mappedEntitlements);
 
-            // Default to first active entitlement if available
-            if (mappedEntitlements.length > 0 && !formData.leaveTypeId) {
-                setFormData(prev => ({ ...prev, leaveTypeId: mappedEntitlements[0].leaveTypeId }));
+            // Default to first active AND ELIGIBLE entitlement if available
+            const eligibleEntitlements = mappedEntitlements.filter(ent =>
+                ent.leaveType?.appliesToAll ||
+                (user?.jobTitle && ent.leaveType?.appliesToRoles?.includes(user.jobTitle))
+            );
+
+            if (eligibleEntitlements.length > 0 && !formData.leaveTypeId) {
+                setFormData(prev => ({ ...prev, leaveTypeId: eligibleEntitlements[0].leaveTypeId }));
             }
         } catch (error) {
             console.error('Error loading leave data:', error);
@@ -154,10 +159,12 @@ const MyLeave: React.FC = () => {
     };
 
     const getBalanceStatus = (remaining: number, allocated: number) => {
+        if (allocated >= 999) return { color: 'bg-blue-50 text-blue-700 border-blue-200', status: 'Unlimited' };
+
         const percentage = (remaining / allocated) * 100;
-        if (percentage > 50) return { color: 'bg-[#d1fae5] text-[#065f46]', status: 'Good' };
-        if (percentage > 20) return { color: 'bg-[#fef3c7] text-[#92400e]', status: 'Low' };
-        return { color: 'bg-[#fee2e2] text-[#991b1b]', status: 'Critical' };
+        if (percentage > 50) return { color: 'bg-[#d1fae5] text-[#065f46] border-[#6ee7b7]', status: 'Good' };
+        if (percentage > 20) return { color: 'bg-[#fef3c7] text-[#92400e] border-[#fcd34d]', status: 'Low' };
+        return { color: 'bg-[#fee2e2] text-[#991b1b] border-[#fca5a5]', status: 'Critical' };
     };
 
     if (loading) {
@@ -187,10 +194,21 @@ const MyLeave: React.FC = () => {
                                     <div className="text-xs font-semibold text-slate-500 uppercase mb-2 truncate">
                                         {ent.leaveTypeName}
                                     </div>
-                                    <div className="text-3xl font-bold text-slate-900 mb-1">
-                                        {ent.remaining} <span className="text-sm font-normal text-slate-500">/ {ent.allocated} days</span>
-                                    </div>
-                                    <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${status.color} mt-2`}>
+                                    {ent.allocated >= 999 ? (
+                                        <>
+                                            <div className="text-xl font-bold text-slate-900 mb-1">
+                                                Unlimited
+                                            </div>
+                                            <div className="text-xs text-slate-500 mb-2">
+                                                Approval required
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="text-3xl font-bold text-slate-900 mb-1">
+                                            {ent.remaining} <span className="text-sm font-normal text-slate-500">/ {ent.allocated} days</span>
+                                        </div>
+                                    )}
+                                    <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${status.color} mt-2 border`}>
                                         {status.status}
                                     </div>
                                 </div>
@@ -228,11 +246,16 @@ const MyLeave: React.FC = () => {
                                 disabled={entitlements.length === 0}
                             >
                                 <option value="">Select type...</option>
-                                {entitlements.map(ent => (
-                                    <option key={ent.id} value={ent.leaveTypeId}>
-                                        {ent.leaveTypeName}
-                                    </option>
-                                ))}
+                                {entitlements
+                                    .filter(ent =>
+                                        ent.leaveType?.appliesToAll ||
+                                        (user?.jobTitle && ent.leaveType?.appliesToRoles?.includes(user.jobTitle))
+                                    )
+                                    .map(ent => (
+                                        <option key={ent.id} value={ent.leaveTypeId}>
+                                            {ent.leaveTypeName}
+                                        </option>
+                                    ))}
                             </select>
                         </div>
 
@@ -326,13 +349,13 @@ const MyLeave: React.FC = () => {
                                                 {req.status === 'Pending' && (
                                                     <button
                                                         onClick={() => {
-                                                            if (confirm('Cancel this leave request?')) {
+                                                            if (confirm('Are you sure you want to withdraw this request?')) {
                                                                 leaveService.cancelRequest(user!.organizationId!, req.id).then(() => loadData());
                                                             }
                                                         }}
-                                                        className="text-red-600 hover:text-red-700 text-sm font-medium"
+                                                        className="text-amber-600 hover:text-amber-700 text-sm font-medium"
                                                     >
-                                                        Cancel
+                                                        Withdraw
                                                     </button>
                                                 )}
                                             </td>

@@ -581,12 +581,20 @@ export interface BreakRules {
   isPaid: boolean;
 }
 
+export interface SchedulingRules {
+  enabled: boolean;
+  allowOpenShifts: boolean;
+  allowShiftSwaps: boolean;
+  requireAcceptance: boolean;
+}
+
 export interface OrganizationSettings {
   id: string;
   organizationId: string;
   attendance: AttendanceRules;
   lunch: LunchRules;
   breaks: BreakRules;
+  scheduling: SchedulingRules;
   updatedAt: string;
   updatedBy?: string;
 }
@@ -615,6 +623,13 @@ export const DEFAULT_BREAK_RULES: BreakRules = {
   maxBreaksPerDay: 2,
   maxDurationMinutes: 15,
   isPaid: true
+};
+
+export const DEFAULT_SCHEDULING_RULES: SchedulingRules = {
+  enabled: true,
+  allowOpenShifts: true,
+  allowShiftSwaps: false,
+  requireAcceptance: true
 };
 
 // =====================================================
