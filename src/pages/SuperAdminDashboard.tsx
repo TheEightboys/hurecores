@@ -9,6 +9,7 @@ import BillingManager from '../components/admin/BillingManager';
 import AuditLogManager from '../components/admin/AuditLogManager';
 import SettingsManager from '../components/admin/SettingsManager';
 import StatutoryRulesManager from '../components/admin/StatutoryRulesManager';
+import SiteContentManager from '../components/admin/SiteContentManager';
 import { PrivacyMask, PrivacyToggle } from '../components/common/PrivacyControl';
 
 // Types
@@ -75,7 +76,7 @@ const SuperAdminDashboard: React.FC = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'organizations' | 'billing' | 'statutory' | 'audit' | 'settings'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'organizations' | 'billing' | 'statutory' | 'audit' | 'settings' | 'content'>('overview');
     const [initialApprovalFilter, setInitialApprovalFilter] = useState<'Pending Review' | 'All'>('Pending Review');
 
     // Data
@@ -237,6 +238,7 @@ const SuperAdminDashboard: React.FC = () => {
         { id: 'organizations', label: '🏢 Organization Details', badge: 0 },
         { id: 'billing', label: '💳 Billing', badge: 0 },
         { id: 'statutory', label: '📜 Statutory Rules', badge: 0 },
+        { id: 'content', label: '📝 Site Content', badge: 0 },
         { id: 'audit', label: '📋 Audit Log', badge: 0 },
         { id: 'settings', label: '⚙️ Settings', badge: 0 }
     ];
@@ -315,6 +317,7 @@ const SuperAdminDashboard: React.FC = () => {
                             {activeTab === 'organizations' && 'Organizations'}
                             {activeTab === 'billing' && 'Billing'}
                             {activeTab === 'statutory' && 'Statutory Payroll Rules'}
+                            {activeTab === 'content' && 'Landing Page Content'}
                             {activeTab === 'audit' && 'Audit Log'}
                             {activeTab === 'settings' && 'Settings'}
                         </h2>
@@ -322,9 +325,9 @@ const SuperAdminDashboard: React.FC = () => {
                             {activeTab === 'approvals'
                                 ? 'Verify organizations and facilities before enabling platform access.'
                                 : activeTab === 'organizations'
-                                    ? 'Manage approved organizations, view facilities, and control platform access.'
-                                    : activeTab === 'statutory'
-                                        ? 'Manage Kenya statutory tax and deduction rates for payroll calculations.'
+                                    ? 'Manage Kenya statutory tax and deduction rates for payroll calculations.'
+                                    : activeTab === 'content'
+                                        ? 'Manage content for the public landing page.'
                                         : activeTab === 'billing'
                                             ? 'Welcome back, Super Admin.'
                                             : 'Welcome back, Super Admin.'}
@@ -529,6 +532,9 @@ const SuperAdminDashboard: React.FC = () => {
 
                 {/* Statutory Rules Tab */}
                 {activeTab === 'statutory' && <StatutoryRulesManager />}
+
+                {/* Site Content Tab */}
+                {activeTab === 'content' && <SiteContentManager />}
 
                 {/* Audit Log Tab */}
                 {activeTab === 'audit' && <AuditLogManager />}

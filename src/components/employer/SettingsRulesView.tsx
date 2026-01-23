@@ -5,12 +5,14 @@ import type {
     OrganizationSettings,
     AttendanceRules,
     LunchRules,
-    BreakRules
+    BreakRules,
+    SchedulingRules
 } from '../../types';
 import {
     DEFAULT_ATTENDANCE_RULES,
     DEFAULT_LUNCH_RULES,
-    DEFAULT_BREAK_RULES
+    DEFAULT_BREAK_RULES,
+    DEFAULT_SCHEDULING_RULES
 } from '../../types';
 
 const SettingsRulesView: React.FC = () => {
@@ -23,6 +25,7 @@ const SettingsRulesView: React.FC = () => {
     const [attendance, setAttendance] = useState<AttendanceRules>(DEFAULT_ATTENDANCE_RULES);
     const [lunch, setLunch] = useState<LunchRules>(DEFAULT_LUNCH_RULES);
     const [breaks, setBreaks] = useState<BreakRules>(DEFAULT_BREAK_RULES);
+    const [scheduling, setScheduling] = useState<SchedulingRules>(DEFAULT_SCHEDULING_RULES);
 
     useEffect(() => {
         if (user?.organizationId) {
@@ -39,6 +42,7 @@ const SettingsRulesView: React.FC = () => {
             setAttendance(data.attendance);
             setLunch(data.lunch);
             setBreaks(data.breaks);
+            setScheduling(data.scheduling || DEFAULT_SCHEDULING_RULES);
         } catch (error) {
             console.error('Error loading settings:', error);
         } finally {
@@ -53,7 +57,8 @@ const SettingsRulesView: React.FC = () => {
             await settingsService.updateSettings(user.organizationId, {
                 attendance,
                 lunch,
-                breaks
+                breaks,
+                scheduling
             });
             alert('Settings saved successfully!');
         } catch (error) {
@@ -75,6 +80,7 @@ const SettingsRulesView: React.FC = () => {
             setAttendance(data.attendance);
             setLunch(data.lunch);
             setBreaks(data.breaks);
+            setScheduling(data.scheduling || DEFAULT_SCHEDULING_RULES);
             alert('Settings reset to defaults!');
         } catch (error) {
             console.error('Error resetting settings:', error);
@@ -122,6 +128,64 @@ const SettingsRulesView: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Settings Column */}
                 <div className="lg:col-span-2 space-y-8">
+                    {/* Scheduling Rules Section */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900">Shift Scheduling</h3>
+                                <p className="text-xs text-slate-500 mt-1">Enable shift planning and assignments</p>
+                            </div>
+                            <ToggleSwitch
+                                checked={scheduling.enabled}
+                                onChange={(checked) => setScheduling({ ...scheduling, enabled: checked })}
+                            />
+                        </div>
+
+                        {scheduling.enabled && (
+                            <div className="space-y-5 animate-in fade-in duration-300">
+                                {/* Allow Open Shifts */}
+                                <div className="flex items-center justify-between py-3 border-t border-slate-100">
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-700">Allow Open Shifts</label>
+                                        <p className="text-xs text-slate-500 mt-0.5">Staff can see and pick up unassigned shifts</p>
+                                    </div>
+                                    <ToggleSwitch
+                                        checked={scheduling.allowOpenShifts}
+                                        onChange={(checked) => setScheduling({ ...scheduling, allowOpenShifts: checked })}
+                                    />
+                                </div>
+
+                                {/* Allow Shift Swaps (Coming Soon / Hidden or Disabled if desired, but here for completeness) */}
+                                <div className="flex items-center justify-between py-3 border-t border-slate-100">
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-700">Allow Shift Swaps</label>
+                                        <p className="text-xs text-slate-500 mt-0.5">Staff can request to swap shifts with colleagues</p>
+                                    </div>
+                                    <ToggleSwitch
+                                        checked={scheduling.allowShiftSwaps}
+                                        onChange={(checked) => setScheduling({ ...scheduling, allowShiftSwaps: checked })}
+                                    />
+                                </div>
+
+                                {/* Require Acceptance */}
+                                <div className="flex items-center justify-between py-3 border-t border-slate-100">
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-700">Require Staff Acceptance</label>
+                                        <p className="text-xs text-slate-500 mt-0.5">Shifts assigned by managers must be accepted by staff</p>
+                                    </div>
+                                    <ToggleSwitch
+                                        checked={scheduling.requireAcceptance}
+                                        onChange={(checked) => setScheduling({ ...scheduling, requireAcceptance: checked })}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                        {!scheduling.enabled && (
+                            <div className="mt-4 bg-slate-50 p-4 rounded-xl text-sm text-slate-600 border border-slate-200">
+                                <span className="font-semibold">Note:</span> When disabled, the "My Schedule" page for employees will show a standard business hours message instead of shift assignments.
+                            </div>
+                        )}
+                    </div>
                     {/* Attendance Mode Section */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <div className="flex items-center justify-between mb-6">
@@ -393,6 +457,10 @@ const SettingsRulesView: React.FC = () => {
                     <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
                         <h4 className="font-bold text-slate-900 mb-4">Current Policy Summary</h4>
                         <ul className="space-y-2 text-sm text-slate-600">
+                            <li className="flex items-start gap-2">
+                                <span className={`${scheduling.enabled ? 'text-green-500' : 'text-slate-300'} mt-0.5`}>•</span>
+                                <span>Scheduling: {scheduling.enabled ? 'Enabled' : 'Disabled'}</span>
+                            </li>
                             {lunch.enabled && (
                                 <li className="flex items-start gap-2">
                                     <span className="text-green-500 mt-0.5">•</span>

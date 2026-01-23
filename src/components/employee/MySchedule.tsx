@@ -12,14 +12,7 @@ const MySchedule: React.FC = () => {
     const [availableShifts, setAvailableShifts] = useState<Shift[]>([]);
     const [accepting, setAccepting] = useState<string | null>(null);
     const [settings, setSettings] = useState<OrganizationSettings | null>(null);
-    const [demoSchedulingEnabled, setDemoSchedulingEnabled] = useState(true);
-
-    // Sync toggle with settings when loaded (only once)
-    useEffect(() => {
-        if (settings) {
-            setDemoSchedulingEnabled(settings.scheduling?.enabled ?? true);
-        }
-    }, [settings]);
+    // settings state is sufficient
 
     useEffect(() => {
         if (user) {
@@ -95,64 +88,29 @@ const MySchedule: React.FC = () => {
 
     // --- RENDER HELPERS ---
 
-    // Toggle Section Component
-    const DemoToggle = () => (
-        <div className="mb-8 bg-white border border-slate-200 p-4 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
-            <div>
-                <div className="font-bold text-slate-900 flex items-center gap-2">
-                    Scheduling Mode (demo toggle)
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                    This toggle is for the preview only. In production, it's controlled by an org setting like <code className="bg-slate-100 px-1 rounded">uses_shift_scheduling</code>.
-                </p>
-            </div>
-            <div className="flex items-center gap-3">
-                <span className={`text-sm font-bold ${demoSchedulingEnabled ? 'text-teal-700' : 'text-slate-400'}`}>
-                    {demoSchedulingEnabled ? 'Shift Assignable' : 'Standard Hours'}
-                </span>
-                <button
-                    onClick={() => setDemoSchedulingEnabled(!demoSchedulingEnabled)}
-                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 ${demoSchedulingEnabled ? 'bg-teal-500' : 'bg-slate-200'
-                        }`}
-                >
-                    <span
-                        className={`${demoSchedulingEnabled ? 'translate-x-6' : 'translate-x-1'
-                            } inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-200 ease-in-out`}
-                    />
-                </button>
-            </div>
-        </div>
-    );
 
-    // Standard View Content
-    const StandardView = () => (
-        <div className="bg-white rounded-[2rem] p-12 border border-slate-200 text-center shadow-sm max-w-3xl mx-auto animate-in fade-in zoom-in duration-300">
-            <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <span className="text-4xl">🏢</span>
+    // No Scheduling View
+    const NoSchedulingView = () => (
+        <div className="bg-white rounded-[2rem] p-12 border border-slate-200 text-center shadow-sm max-w-2xl mx-auto animate-in fade-in zoom-in duration-300">
+            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-4xl grayscale opacity-70">📅</span>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-3">Standard Business Hours</h2>
-            <p className="text-slate-500 text-lg mb-8 max-w-md mx-auto">
-                Your organization operates on standard business hours. Please refer to your employment contract or manager for specific reporting times.
+            <p className="text-slate-700 font-semibold text-lg mb-2">
+                This organization does not currently use shift scheduling in HURE for your role.
+            </p>
+            <p className="text-slate-500 mb-8 max-w-md mx-auto leading-relaxed">
+                If shift scheduling is enabled in the future, your assigned shifts will appear here.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left max-w-lg mx-auto">
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="font-bold text-slate-700 mb-1">Weekly Schedule</div>
-                    <div className="text-sm text-slate-500">Monday - Friday</div>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="font-bold text-slate-700 mb-1">Core Hours</div>
-                    <div className="text-sm text-slate-500">8:00 AM - 5:00 PM</div>
-                </div>
-            </div>
-
-            <div className="mt-8 pt-8 border-t border-slate-100">
-                <p className="text-sm text-slate-400">
-                    Need to check your attendance? <a href="/employee/attendance" className="text-blue-600 font-bold hover:underline">Go to My Attendance</a>
+            <div className="pt-6 border-t border-slate-100">
+                <p className="text-slate-600">
+                    For daily time tracking, use <a href="/employee/attendance" className="text-teal-600 font-bold hover:text-teal-700 hover:underline transition-colors">My Attendance</a>
                 </p>
             </div>
         </div>
     );
+
+
 
     // --- RENDER ---
     const upcomingShiftsCount = myShifts.filter(s => !isPast(s.date)).length;
@@ -167,11 +125,9 @@ const MySchedule: React.FC = () => {
                 </div>
             </div>
 
-            {/* DEMO TOGGLE */}
-            <DemoToggle />
-
-            {!demoSchedulingEnabled ? (
-                <StandardView />
+            {/* Content based on settings */}
+            {!(settings?.scheduling?.enabled ?? true) ? (
+                <NoSchedulingView />
             ) : (
                 <>
                     {/* Quick Stats Cards (Only relevant in Shift Mode) */}

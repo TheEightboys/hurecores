@@ -301,5 +301,13 @@ service cloud.firestore {
       // Only Super Admin can create/update rules
       allow write: if isSuperAdmin();
     }
+
+    // Site Content (Landing Page)
+    match /site_content/{docId} {
+      // PUBLIC READ: Allow anyone to read landing page content
+      allow read: if true;
+      // Only SuperAdmin can edit
+      allow write: if isSuperAdmin();
+    }
   }
 }

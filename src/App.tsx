@@ -2,6 +2,7 @@
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
+import HureCoreLanding from './components/landing/HureCoreLanding';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AcceptInvite from './pages/AcceptInvite';
@@ -26,7 +27,7 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route path="/" element={<HureCoreLanding />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />

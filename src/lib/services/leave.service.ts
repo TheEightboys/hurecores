@@ -485,6 +485,7 @@ export const leaveService = {
   async getStaffBalances(organizationId: string, staffId: string, year?: number): Promise<(LeaveBalance & { remaining: number; allocated: number; used: number })[]> {
     const currentYear = year || new Date().getFullYear();
 
+    // 1. Get Entitlements
     const q = query(
       collections.leaveEntitlements(organizationId),
       where('staffId', '==', staffId),
@@ -502,21 +503,45 @@ export const leaveService = {
       } as any as LeaveBalance;
     });
 
-    // Fetch leave type details and compute remaining days
+    // 2. Fetch leave type details
     const leaveTypes = await this.getLeaveTypes(organizationId);
+
+    // 3. Fetch ALL leave requests for this staff member (to recalculate used/pending)
+    // We fetch all to ensure we catch future dates or mismatched years properly
+    const allRequests = await this.getLeaveRequests(organizationId, { staffId });
+
     return balances.map(balance => {
       const allocated = balance.totalDays || 0;
-      const used = balance.usedDays || 0;
-      const pending = balance.pendingDays || 0;
-      // Note: Entitlements might have carryForwardDays, implicitly added to allocated or separate?
-      // For now, simple remaining calc.
+      const leaveType = leaveTypes.find(t => t.id === balance.leaveTypeId);
+
+      // Filter requests for this leave type that fall within or after this entitlement year
+      // This ensures future leave (e.g. 2028) is deducted from current balance (2026) if no future balance exists yet,
+      // which matches user expectation ("I booked leave, why isn't it deducted?").
+      const startOfYear = `${balance.year}-01-01`;
+
+      const relevantRequests = allRequests.filter(r =>
+        r.leaveTypeId === balance.leaveTypeId &&
+        r.startDate >= startOfYear &&
+        ['Approved', 'Pending'].includes(r.status)
+      );
+
+      // Recalculate used and pending from actual requests (Self-Correcting)
+      const used = relevantRequests
+        .filter(r => r.status === 'Approved')
+        .reduce((sum, r) => sum + (r.daysRequested || 0), 0);
+
+      const pending = relevantRequests
+        .filter(r => r.status === 'Pending')
+        .reduce((sum, r) => sum + (r.daysRequested || 0), 0);
+
       const remaining = Math.max(0, allocated - used - pending);
+
       return {
         ...balance,
-        leaveType: leaveTypes.find(t => t.id === balance.leaveTypeId),
+        leaveType,
         allocated,
-        used,
-        remaining
+        used,     // Returns computed value, ignoring potentially stale DB value
+        remaining // Returns computed value
       };
     });
   },
