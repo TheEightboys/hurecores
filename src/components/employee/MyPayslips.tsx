@@ -277,9 +277,7 @@ const MyPayslips: React.FC = () => {
                     </button>
                 </div>
 
-                <div className="mt-4 bg-orange-50 border border-orange-100 text-orange-800 px-4 py-2 rounded-lg text-xs font-medium">
-                    Dev note: The date range filters which finalized pay periods appear. Each row links to a locked snapshot used by export.
-                </div>
+
             </div>
 
             {/* Payslip List */}

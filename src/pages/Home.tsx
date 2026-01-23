@@ -12,7 +12,7 @@ const Home: React.FC = () => {
       <Navbar />
       <Hero />
       <Features />
-      <Features />
+
       <Pricing />
       <FAQ />
 

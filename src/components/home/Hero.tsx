@@ -35,7 +35,18 @@ const Hero: React.FC = () => {
                     </Link>
                 </div>
 
-                <div className="mt-16 pt-8 border-t border-slate-100 flex flex-wrap justify-center gap-8 opacity-60 grayscale animate-fade-in-up animation-delay-500">
+                <div className="mt-16 relative group animate-fade-in-up animation-delay-500">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-teal-600 to-cyan-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                    <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-white">
+                        <img
+                            src="/landing_v2.png"
+                            alt="HURE Core Dashboard Interface"
+                            className="w-full h-auto object-cover transform transition-transform duration-700 hover:scale-[1.01]"
+                        />
+                    </div>
+                </div>
+
+                <div className="mt-16 pt-8 border-t border-slate-100 flex flex-wrap justify-center gap-8 opacity-60 grayscale animate-fade-in-up animation-delay-700">
                     {/* Trust badges removed */}
                 </div>
             </div>

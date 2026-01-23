@@ -177,6 +177,7 @@ export interface Profile {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  address?: string;
   avatarUrl?: string;
   organizationId?: string;
   locationId?: string;

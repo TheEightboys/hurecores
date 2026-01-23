@@ -47,12 +47,12 @@ const Features: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {features.map((f, i) => (
-                        <div key={i} className="group p-8 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                        <div key={i} className="group h-full flex flex-col p-8 bg-white rounded-3xl border border-slate-300 shadow-sm hover:shadow-xl hover:border-blue-400 hover:-translate-y-1 transition-all duration-300">
                             <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                                 {f.icon}
                             </div>
                             <h3 className="text-xl font-bold mb-4 text-slate-900">{f.title}</h3>
-                            <p className="text-slate-600 leading-relaxed">{f.desc}</p>
+                            <p className="text-slate-600 leading-relaxed flex-1">{f.desc}</p>
                         </div>
                     ))}
                 </div>

@@ -31,6 +31,7 @@ import type {
   PLAN_LIMITS
 } from '../../types';
 import { organizationService } from './organization.service';
+import { auditService } from './audit.service';
 
 // =====================================================
 // STAFF SERVICE
@@ -486,6 +487,25 @@ export const staffService = {
         ...cleanUpdates,
         updatedAt: serverTimestamp()
       });
+
+      // Add audit log for profile updates
+      if (organizationId || currentProfile.organizationId) {
+        const actingUser = auth.currentUser;
+        const isSelfUpdate = actingUser?.uid === userId;
+        const orgId = organizationId || currentProfile.organizationId!; // Safe assertion as checked above
+
+        await auditService.logAction(
+          orgId,
+          isSelfUpdate ? 'Staff Record Updated (Self)' : 'Staff Record Updated',
+          'Staff',
+          {
+            entityId: userId,
+            entityName: currentProfile.fullName || 'Staff Member',
+            details: { updates: Object.keys(cleanUpdates) },
+            actorName: actingUser?.displayName || actingUser?.email || 'System'
+          }
+        );
+      }
 
       return { success: true };
     } catch (error: any) {

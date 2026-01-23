@@ -1,36 +1,145 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
-import type { Profile } from '../../types';
+import { staffService, policyDocumentsService } from '../../lib/services';
+import type { Profile, PolicyDocument, DocumentAcknowledgement } from '../../types';
 
 const MyProfile: React.FC = () => {
     const { user } = useAuth();
     const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'details' | 'documents'>('details');
+
+    // Edit State
+    const [isEditing, setIsEditing] = useState(false);
+    const [editForm, setEditForm] = useState<{
+        phone: string;
+        email: string;
+        address: string;
+        emergencyContactName: string;
+        emergencyContactPhone: string;
+    }>({
+        phone: '',
+        email: '',
+        address: '',
+        emergencyContactName: '',
+        emergencyContactPhone: ''
+    });
+    const [saving, setSaving] = useState(false);
+
+    // Documents State
+    const [documents, setDocuments] = useState<PolicyDocument[]>([]);
+    const [acknowledgements, setAcknowledgements] = useState<DocumentAcknowledgement[]>([]);
+    const [loadingDocs, setLoadingDocs] = useState(false);
 
     useEffect(() => {
-        const fetchProfile = async () => {
-            if (user?.id) {
-                try {
-                    const docRef = doc(db, 'users', user.id);
-                    const docSnap = await getDoc(docRef);
-                    if (docSnap.exists()) {
-                        setProfile(docSnap.data() as Profile);
-                    } else {
-                        // Fallback to auth user data if profile doc doesn't exist
-                        setProfile(user as unknown as Profile);
-                    }
-                } catch (error) {
-                    console.error("Error fetching profile:", error);
-                } finally {
-                    setLoading(false);
-                }
+        if (user?.id) {
+            loadProfile();
+            loadDocuments();
+        }
+    }, [user?.id, user?.organizationId]);
+
+    const loadProfile = async () => {
+        try {
+            // Use service to get consistent profile data
+            const data = await staffService.getById(user!.id);
+            if (data) {
+                setProfile(data);
+                // Initialize form data
+                setEditForm({
+                    phone: data.phone || '',
+                    email: data.email || '',
+                    address: data.address || '',
+                    emergencyContactName: data.emergencyContactName || '',
+                    emergencyContactPhone: data.emergencyContactPhone || ''
+                });
             }
-        };
-        fetchProfile();
-    }, [user]);
+        } catch (error) {
+            console.error("Error fetching profile:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadDocuments = async () => {
+        if (!user?.organizationId) return;
+        setLoadingDocs(true);
+        try {
+            // Get documents assigned to this user
+            const docs = await policyDocumentsService.getForStaff(
+                user.organizationId,
+                user.id,
+                profile?.jobTitle // Pass job title if available from context/profile
+            );
+            setDocuments(docs);
+
+            // Get acknowledgements for these docs
+            // Note: Service fetches by docId, so we might need to fetch all or check each.
+            // Optimized approach: Fetch all acks for user? 
+            // The service `getAcknowledgements` gets ALL for a doc. 
+            // We can iterate docs and check status.
+            // Better: Let's just track acks we check as we render or pre-fetch status.
+            // For now, let's just fetch acks for the displayed docs.
+            const acks: DocumentAcknowledgement[] = [];
+            for (const doc of docs) {
+                const docAcks = await policyDocumentsService.getAcknowledgements(user.organizationId, doc.id);
+                const userAck = docAcks.find(a => a.staffId === user.id);
+                if (userAck) acks.push(userAck);
+            }
+            setAcknowledgements(acks);
+
+        } catch (error) {
+            console.error("Error loading documents:", error);
+        } finally {
+            setLoadingDocs(false);
+        }
+    };
+
+    const handleSaveProfile = async () => {
+        if (!user?.id) return;
+        setSaving(true);
+        try {
+            const result = await staffService.update(user.id, {
+                phone: editForm.phone,
+                // Email might be read-only in some systems, but user asked to edit it.
+                // Firebase Auth email update is separate, this just updates the profile record.
+                email: editForm.email,
+                address: editForm.address,
+                emergencyContactName: editForm.emergencyContactName,
+                emergencyContactPhone: editForm.emergencyContactPhone
+            });
+
+            if (result.success) {
+                setIsEditing(false);
+                loadProfile(); // Refresh
+                alert('Profile updated successfully');
+            } else {
+                alert(result.error || 'Failed to update profile');
+            }
+        } catch (error) {
+            console.error('Error saving profile:', error);
+            alert('An error occurred while saving');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleAcknowledge = async (doc: PolicyDocument) => {
+        if (!user?.organizationId || !user?.id) return;
+        if (!confirm(`Acknowledge that you have read ${doc.name}?`)) return;
+
+        try {
+            const result = await policyDocumentsService.acknowledge(
+                user.organizationId,
+                doc.id,
+                user.id,
+                user.name // Use name from context or profile
+            );
+
+            setAcknowledgements(prev => [...prev, result]);
+        } catch (error) {
+            console.error('Error acknowledging document:', error);
+            alert('Failed to acknowledge document');
+        }
+    };
 
     if (loading) {
         return (
@@ -94,8 +203,11 @@ const MyProfile: React.FC = () => {
                             </div>
                         </div>
                         <div className="flex gap-3">
-                            <button className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-xl font-semibold text-sm shadow-sm transition-all">
-                                Edit Profile
+                            <button
+                                onClick={() => setIsEditing(!isEditing)}
+                                className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-xl font-semibold text-sm shadow-sm transition-all"
+                            >
+                                {isEditing ? 'Cancel Editing' : 'Edit Profile'}
                             </button>
                         </div>
                     </div>
@@ -203,25 +315,99 @@ const MyProfile: React.FC = () => {
                 <div className="space-y-8">
                     {/* Personal Information */}
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                        <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4">
-                            <span className="text-slate-400">👤</span>
-                            <h3 className="font-bold text-slate-900">Personal Information</h3>
-                        </div>
-                        <div className="space-y-5">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Phone Number</label>
-                                <div className="font-medium text-slate-900">{safeProfile.phone || 'Not set'}</div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Email</label>
-                                <div className="font-medium text-slate-900">{safeProfile.email}</div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Emergency Contact</label>
-                                <div className="font-medium text-slate-900">{safeProfile.emergencyContactName || 'Not set'}</div>
-                                {safeProfile.emergencyContactPhone && <div className="text-sm text-slate-500">{safeProfile.emergencyContactPhone}</div>}
+                        <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
+                            <div className="flex items-center gap-2">
+                                <span className="text-slate-400">👤</span>
+                                <h3 className="font-bold text-slate-900">Personal Information</h3>
                             </div>
                         </div>
+
+                        {isEditing ? (
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Phone Number</label>
+                                    <input
+                                        type="tel"
+                                        value={editForm.phone}
+                                        onChange={e => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0f766e] focus:border-[#0f766e]"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
+                                    <input
+                                        type="email"
+                                        value={editForm.email}
+                                        onChange={e => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0f766e] focus:border-[#0f766e]"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Address</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.address}
+                                        onChange={e => setEditForm(prev => ({ ...prev, address: e.target.value }))}
+                                        placeholder="Enter your residential address"
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0f766e] focus:border-[#0f766e]"
+                                    />
+                                </div>
+                                <div className="pt-2 border-t border-slate-100">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Emergency Contact Name</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.emergencyContactName}
+                                        onChange={e => setEditForm(prev => ({ ...prev, emergencyContactName: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0f766e] focus:border-[#0f766e]"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Emergency Contact Phone</label>
+                                    <input
+                                        type="tel"
+                                        value={editForm.emergencyContactPhone}
+                                        onChange={e => setEditForm(prev => ({ ...prev, emergencyContactPhone: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0f766e] focus:border-[#0f766e]"
+                                    />
+                                </div>
+                                <div className="flex gap-2 pt-2">
+                                    <button
+                                        onClick={handleSaveProfile}
+                                        disabled={saving}
+                                        className="flex-1 bg-[#0f766e] text-white py-2 rounded-lg text-sm font-semibold hover:bg-[#115e59] transition-colors disabled:opacity-50"
+                                    >
+                                        {saving ? 'Saving...' : 'Save Changes'}
+                                    </button>
+                                    <button
+                                        onClick={() => setIsEditing(false)}
+                                        disabled={saving}
+                                        className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-5">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Phone Number</label>
+                                    <div className="font-medium text-slate-900">{safeProfile.phone || 'Not set'}</div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Email</label>
+                                    <div className="font-medium text-slate-900">{safeProfile.email}</div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Address</label>
+                                    <div className="font-medium text-slate-900">{safeProfile.address || 'Not set'}</div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Emergency Contact</label>
+                                    <div className="font-medium text-slate-900">{safeProfile.emergencyContactName || 'Not set'}</div>
+                                    {safeProfile.emergencyContactPhone && <div className="text-sm text-slate-500">{safeProfile.emergencyContactPhone}</div>}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Employment Details */}
@@ -262,21 +448,59 @@ const MyProfile: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* My Documents (Placeholder) */}
+                    {/* My Documents */}
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
                         <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4">
                             <span className="text-slate-400">📂</span>
                             <h3 className="font-bold text-slate-900">My Documents</h3>
                         </div>
                         <div className="space-y-3">
-                            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                                <span className="text-sm font-medium text-slate-700">Employment Contract</span>
-                                <button className="text-xs font-bold text-[#0f766e] hover:underline">View</button>
-                            </div>
-                            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                                <span className="text-sm font-medium text-slate-700">Code of Conduct</span>
-                                <button className="text-xs font-bold text-[#0f766e] hover:underline">Acknowledge</button>
-                            </div>
+                            {loadingDocs ? (
+                                <div className="py-4 flex justify-center">
+                                    <div className="animate-spin w-5 h-5 border-2 border-slate-300 border-t-slate-500 rounded-full"></div>
+                                </div>
+                            ) : documents.length > 0 ? (
+                                documents.map(doc => {
+                                    const isAcknowledged = acknowledgements.some(ack => ack.documentId === doc.id);
+                                    return (
+                                        <div key={doc.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                                            <div className="flex-1 mr-3">
+                                                <div className="text-sm font-medium text-slate-700">{doc.name}</div>
+                                                {doc.requiresAcknowledgement && (
+                                                    <div className="text-[10px] text-slate-500 mt-0.5">
+                                                        {isAcknowledged ? '✅ Acknowledged' : '⚠️ Action Required'}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <a
+                                                    href={doc.fileUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-xs font-bold text-[#0f766e] hover:underline bg-white px-2 py-1 rounded border border-slate-200"
+                                                >
+                                                    View
+                                                </a>
+
+                                                {doc.requiresAcknowledgement && !isAcknowledged && (
+                                                    <button
+                                                        onClick={() => handleAcknowledge(doc)}
+                                                        className="text-xs font-bold text-white bg-[#0f766e] hover:bg-[#115e59] px-2 py-1 rounded transition-colors shadow-sm"
+                                                    >
+                                                        Acknowledge
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div className="text-center py-6">
+                                    <div className="text-2xl mb-2">📄</div>
+                                    <p className="text-sm text-slate-500 mb-1">No documents found</p>
+                                    <p className="text-xs text-slate-400">Documents assigned to you will appear here</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 

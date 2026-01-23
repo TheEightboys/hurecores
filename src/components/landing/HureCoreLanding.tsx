@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { siteContentService, DEFAULT_LANDING_CONTENT } from "../../lib/services/siteContent.service";
+import heroImg from "../../assets/hero.jpg";
 // import { motion, AnimatePresence } from "framer-motion"; // REMOVED
 
 // --- ANIMATION VARIANTS REMOVED ---
@@ -240,33 +241,40 @@ export default function HureCoreLanding() {
 
             {/* HERO */}
             <SectionShell id="about" className="pt-32 lg:pt-40 pb-20">
-                <div
-                    className="flex flex-col items-center text-center max-w-4xl mx-auto"
-                >
-                    <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-teal-50 border border-teal-100 px-4 py-1.5 text-xs font-bold text-teal-700 shadow-sm">
-                        <span className="flex h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
-                        New: Multi-location Support
+                <div className="grid lg:grid-cols-[1.05fr,0.95fr] gap-12 items-center">
+                    <div className="flex flex-col items-center text-center lg:items-start lg:text-left max-w-3xl mx-auto lg:mx-0">
+                        <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-teal-50 border border-teal-100 px-4 py-1.5 text-xs font-bold text-teal-700 shadow-sm">
+                            <span className="flex h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
+                            New: Multi-location Support
+                        </div>
+
+                        <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight text-slate-900 leading-[1.05]">
+                            {val(content.heroHeadlinePrefix, DEFAULT_LANDING_CONTENT.heroHeadlinePrefix)} <br className="hidden md:block" />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">
+                                {val(content.heroHeadlineHighlight, DEFAULT_LANDING_CONTENT.heroHeadlineHighlight)}
+                            </span>
+                        </h1>
+
+                        <p className="mt-8 text-lg lg:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                            {val(content.heroBody, DEFAULT_LANDING_CONTENT.heroBody)}
+                        </p>
+
+                        <div className="mt-10 flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                            <PrimaryButton onClick={() => navTo("trial")} className="w-full sm:w-auto text-base">Start 10-Day Free Trial</PrimaryButton>
+                            <SecondaryButton onClick={() => scrollToId("pricing")}>View Pricing</SecondaryButton>
+                        </div>
+
+                        <p className="mt-6 text-sm font-medium text-slate-400">
+                            {val(content.heroNote, DEFAULT_LANDING_CONTENT.heroNote)}
+                        </p>
                     </div>
 
-                    <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight text-slate-900 leading-[1.1]">
-                        {val(content.heroHeadlinePrefix, DEFAULT_LANDING_CONTENT.heroHeadlinePrefix)} <br className="hidden md:block" />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">
-                            {val(content.heroHeadlineHighlight, DEFAULT_LANDING_CONTENT.heroHeadlineHighlight)}
-                        </span>
-                    </h1>
-
-                    <p className="mt-8 text-lg lg:text-xl text-slate-600 max-w-2xl leading-relaxed">
-                        {val(content.heroBody, DEFAULT_LANDING_CONTENT.heroBody)}
-                    </p>
-
-                    <div className="mt-10 flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                        <PrimaryButton onClick={() => navTo("trial")} className="w-full sm:w-auto text-base">Start 10-Day Free Trial</PrimaryButton>
-                        <SecondaryButton onClick={() => scrollToId("pricing")}>View Pricing</SecondaryButton>
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-gradient-to-br from-teal-100/70 via-white to-blue-50/80 blur-3xl -z-10" />
+                        <div className="overflow-hidden rounded-[2rem] border border-white shadow-2xl shadow-slate-900/10 bg-white/60 backdrop-blur-sm">
+                            <img src={heroImg} alt="Healthcare staff collaborating with HURE Core" className="w-full h-full object-cover" />
+                        </div>
                     </div>
-
-                    <p className="mt-6 text-sm font-medium text-slate-400">
-                        {val(content.heroNote, DEFAULT_LANDING_CONTENT.heroNote)}
-                    </p>
                 </div>
 
                 {/* BENTO GRID FEATURES */}
