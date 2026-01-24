@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useTrialStatus, AccessBlockedOverlay } from '../../context/TrialContext';
 import { staffService } from '../../lib/services/staff.service';
 import type { Profile } from '../../types';
 
 const ManagerPayroll: React.FC = () => {
     const { user } = useAuth();
+    const { isVerified } = useTrialStatus();
     const [activeTab, setActiveTab] = useState<'All' | 'Salaried' | 'Daily' | 'Hourly'>('All');
     const [staff, setStaff] = useState<Profile[]>([]);
     const [loading, setLoading] = useState(true);
+
+    if (!isVerified) {
+        return <AccessBlockedOverlay reason="verification" />;
+    }
 
     useEffect(() => {
         if (user?.organizationId) {

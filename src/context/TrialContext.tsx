@@ -80,12 +80,16 @@ export const TrialProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         if (subscription?.trialEndsAt) {
             trialEndDate = new Date(subscription.trialEndsAt);
-        } else if (organization?.approvedAt) {
-            // Start trial from approval date
-            trialEndDate = new Date(organization.approvedAt);
+        } else if (organization?.verifiedAt) {
+            // Start trial from verification date
+            trialEndDate = new Date(organization.verifiedAt);
             trialEndDate.setDate(trialEndDate.getDate() + 10); // 10 days trial
+        } else if (organization?.approvedAt) {
+            // Fallback for organizations with approvedAt field (legacy)
+            trialEndDate = new Date(organization.approvedAt);
+            trialEndDate.setDate(trialEndDate.getDate() + 10);
         } else if (organization?.orgStatus === 'Verified' && organization?.createdAt) {
-            // Fallback for verified orgs without approvedAt (legacy)
+            // Fallback for verified orgs without verifiedAt/approvedAt (legacy)
             trialEndDate = new Date(organization.createdAt);
             trialEndDate.setDate(trialEndDate.getDate() + 10);
         }
@@ -166,7 +170,7 @@ export const AccessBlockedOverlay: React.FC<{ reason?: 'inactive' | 'verificatio
         },
         verification: {
             title: 'Verification Required',
-            subtitle: 'Complete organization verification to access this feature.',
+            subtitle: 'This feature is disabled until your organization is verified. Submit required business credentials (Business Registration and KRA PIN) for review.',
             icon: '📋'
         },
         payout: {
@@ -184,12 +188,18 @@ export const AccessBlockedOverlay: React.FC<{ reason?: 'inactive' | 'verificatio
                 <div className="text-6xl mb-4">{msg.icon}</div>
                 <h2 className="text-2xl font-bold text-slate-900 mb-2">{msg.title}</h2>
                 <p className="text-slate-600 mb-6">{msg.subtitle}</p>
-                <a
-                    href="/employer/billing"
-                    className="inline-block bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700"
+                <button
+                    onClick={() => {
+                        if (reason === 'verification') {
+                            window.location.hash = '/employer/organization';
+                        } else {
+                            window.location.hash = '/employer/billing';
+                        }
+                    }}
+                    className="inline-block bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 cursor-pointer"
                 >
-                    Go to Billing
-                </a>
+                    {reason === 'verification' ? 'Go to Verification' : 'Go to Billing'}
+                </button>
             </div>
         </div>
     );

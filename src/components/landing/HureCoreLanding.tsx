@@ -154,7 +154,7 @@ function TinyLink({ children, onClick }: { children: React.ReactNode; onClick?: 
 function AccordionItem({ q, a, open, onToggle }: { q: string; a: string; open: boolean; onToggle: () => void }) {
     return (
         <div
-            className={classNames("rounded-3xl border overflow-hidden cursor-pointer transition-colors duration-200", open ? "border-teal-200 bg-white shadow-sm" : "border-slate-200 bg-transparent")}
+            className={classNames("rounded-3xl border overflow-hidden cursor-pointer transition-colors duration-200 hover:-translate-y-1 transition-transform duration-200", open ? "border-teal-200 bg-white shadow-sm" : "border-slate-200 bg-transparent")}
         >
             <button onClick={onToggle} className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left outline-none">
                 <span className={classNames("font-bold text-lg transition-colors", open ? "text-teal-800" : "text-slate-800")}>{q}</span>
@@ -188,8 +188,12 @@ export default function HureCoreLanding() {
     // Load content
     useEffect(() => {
         const loadContent = async () => {
-            const data = await siteContentService.getLandingContent();
-            if (data) setContent(data);
+            try {
+                const data = await siteContentService.getLandingContent();
+                if (data) setContent(data);
+            } catch (err) {
+                console.warn("Failed to load custom landing content:", err);
+            }
         };
         loadContent();
     }, []);
@@ -245,10 +249,10 @@ export default function HureCoreLanding() {
                     <div className="flex flex-col items-center text-center lg:items-start lg:text-left max-w-3xl mx-auto lg:mx-0">
                         <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-teal-50 border border-teal-100 px-4 py-1.5 text-xs font-bold text-teal-700 shadow-sm">
                             <span className="flex h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
-                            New: Multi-location Support
+                            New: Healthcare workforce management, done right
                         </div>
 
-                        <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight text-slate-900 leading-[1.05]">
+                        <h1 className="text-5xl lg:text-7xl font-display font-extrabold tracking-tight text-slate-900 leading-[1.05]">
                             {val(content.heroHeadlinePrefix, DEFAULT_LANDING_CONTENT.heroHeadlinePrefix)} <br className="hidden md:block" />
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">
                                 {val(content.heroHeadlineHighlight, DEFAULT_LANDING_CONTENT.heroHeadlineHighlight)}
@@ -282,7 +286,7 @@ export default function HureCoreLanding() {
             <SectionShell id="features" className="!py-12 lg:!py-16">
                 <div className="text-center max-w-3xl mx-auto mb-12">
                     <h2 className="text-base font-bold tracking-widest text-teal-600 uppercase mb-3">features</h2>
-                    <h3 className="text-5xl lg:text-6xl font-extrabold text-slate-900">Everything you need to run a modern workforce</h3>
+                    <h3 className="text-5xl lg:text-6xl font-display font-extrabold text-slate-900">Everything you need to run a modern workforce</h3>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -321,7 +325,7 @@ export default function HureCoreLanding() {
 
                 <div className="text-center max-w-3xl mx-auto mb-16">
                     <h2 className="text-sm font-bold tracking-widest text-teal-600 uppercase mb-3">{content.pricingEyebrow || DEFAULT_LANDING_CONTENT.pricingEyebrow}</h2>
-                    <h3 className="text-5xl lg:text-6xl font-extrabold text-slate-900">{content.pricingTitle || DEFAULT_LANDING_CONTENT.pricingTitle}</h3>
+                    <h3 className="text-5xl lg:text-6xl font-display font-extrabold text-slate-900">{content.pricingTitle || DEFAULT_LANDING_CONTENT.pricingTitle}</h3>
                     <p className="mt-4 text-slate-600 text-lg">{content.pricingNote || DEFAULT_LANDING_CONTENT.pricingNote}</p>
                 </div>
 
@@ -332,8 +336,8 @@ export default function HureCoreLanding() {
                             className={classNames(
                                 "relative flex flex-col p-8 rounded-[2rem] border transition-all duration-300 h-full",
                                 p.featured
-                                    ? "bg-slate-900 text-white shadow-2xl shadow-slate-900/20 border-slate-800 scale-105 z-10"
-                                    : "bg-white text-slate-900 shadow-xl shadow-slate-200/50 border-white"
+                                    ? "bg-slate-900 text-white shadow-2xl shadow-slate-900/20 border-slate-800 scale-105 z-10 hover:-translate-y-2 hover:shadow-2xl transition-all duration-300"
+                                    : "bg-white text-slate-900 shadow-xl shadow-slate-200/50 border-white hover:-translate-y-2 hover:shadow-xl transition-all duration-300"
                             )}
                         >
                             {p.featured && (
@@ -384,7 +388,7 @@ export default function HureCoreLanding() {
                 <div className="grid lg:grid-cols-12 gap-12 items-start">
                     <div className="lg:col-span-4">
                         <h2 className="text-sm font-bold tracking-widest text-teal-600 uppercase mb-3">Support</h2>
-                        <h3 className="text-3xl font-extrabold text-slate-900 mb-4">Frequently Asked Questions</h3>
+                        <h3 className="text-3xl font-display font-extrabold text-slate-900 mb-4">Frequently Asked Questions</h3>
                         <p className="text-slate-600 mb-8">Can't find the answer you're looking for?</p>
                         <SecondaryButton onClick={() => navTo("contact")}>Contact Support</SecondaryButton>
                     </div>

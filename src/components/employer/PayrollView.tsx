@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useTrialStatus } from '../../context/TrialContext';
+import { useTrialStatus, AccessBlockedOverlay } from '../../context/TrialContext';
 import { payrollService, staffService, scheduleService } from '../../lib/services';
 import type { PayrollPeriod, PayrollEntry, Profile } from '../../types';
 import { formatDateTimeKE, formatDateKE, formatTimeKE } from '../../lib/utils/dateFormat';
@@ -30,7 +30,7 @@ interface LocumPayoutEntry {
 
 const PayrollView: React.FC = () => {
     const { user } = useAuth();
-    const { canPerformPayouts } = useTrialStatus(); // Enforce verification check
+    const { canPerformPayouts, isVerified } = useTrialStatus(); // Enforce verification check
     const [loading, setLoading] = useState(true);
     const [periods, setPeriods] = useState<PayrollPeriod[]>([]);
     const [selectedPeriod, setSelectedPeriod] = useState<PayrollPeriod | null>(null);
@@ -54,6 +54,11 @@ const PayrollView: React.FC = () => {
 
     const [newAllowance, setNewAllowance] = useState({ amount: 0, notes: '' });
     const [editingAllowanceIndex, setEditingAllowanceIndex] = useState<number | null>(null);
+
+    // CRITICAL: Block entire payroll access until verified
+    if (!isVerified) {
+        return <AccessBlockedOverlay reason="verification" />;
+    }
 
     useEffect(() => {
         loadPeriods();

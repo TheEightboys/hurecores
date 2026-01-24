@@ -15,6 +15,7 @@ interface SignupFormData {
   orgPhone: string;
   orgAddress: string;
   orgCity: string;
+  orgCountry: string;
 
   // Step 2: Owner Info
   firstName: string;
@@ -30,6 +31,7 @@ interface SignupFormData {
   locationName: string;
   locationCity: string;
   locationAddress: string;
+  locationCountry: string;
   locationPhone: string;
 }
 
@@ -52,6 +54,7 @@ const Signup: React.FC = () => {
     orgPhone: '',
     orgAddress: '',
     orgCity: '',
+    orgCountry: 'Kenya',
     firstName: '',
     lastName: '',
     email: '',
@@ -61,6 +64,7 @@ const Signup: React.FC = () => {
     locationName: '',
     locationCity: '',
     locationAddress: '',
+    locationCountry: 'Kenya',
     locationPhone: ''
   });
 
@@ -105,6 +109,18 @@ const Signup: React.FC = () => {
         setError('Please enter a valid Kenyan phone number for the organization');
         return false;
       }
+      if (!formData.orgAddress.trim()) {
+        setError('Address/Landmark is required');
+        return false;
+      }
+      if (!formData.orgCity.trim()) {
+        setError('City/Town is required');
+        return false;
+      }
+      if (!formData.orgCountry.trim()) {
+        setError('Country is required');
+        return false;
+      }
     }
 
     if (step === 2) {
@@ -129,6 +145,18 @@ const Signup: React.FC = () => {
     if (step === 4) {
       if (!formData.locationName.trim()) {
         setError('Location name is required');
+        return false;
+      }
+      if (!formData.locationAddress.trim()) {
+        setError('Location address is required');
+        return false;
+      }
+      if (!formData.locationCity.trim()) {
+        setError('Location city is required');
+        return false;
+      }
+      if (!formData.locationCountry.trim()) {
+        setError('Location country is required');
         return false;
       }
       // Validate location phone if provided
@@ -231,7 +259,7 @@ const Signup: React.FC = () => {
         phone: formData.orgPhone || null,
         address: formData.orgAddress || null,
         city: formData.orgCity || null,
-        country: 'Kenya',
+        country: formData.orgCountry,
         orgStatus: 'Pending',
         accountStatus: 'Under Review',
         plan: formData.plan,
@@ -267,6 +295,7 @@ const Signup: React.FC = () => {
         name: formData.locationName,
         city: formData.locationCity || null,
         address: formData.locationAddress || null,
+        country: formData.locationCountry,
         phone: formData.locationPhone || null,
         isPrimary: true,
         status: 'Pending',
@@ -277,7 +306,7 @@ const Signup: React.FC = () => {
 
       // Step 5: Create subscription
       const trialEndsAt = new Date();
-      trialEndsAt.setDate(trialEndsAt.getDate() + 14); // 14 day trial
+      trialEndsAt.setDate(trialEndsAt.getDate() + 10); // 10 day trial
 
       await addDoc(collections.subscriptions(orgId), {
         organizationId: orgId,
@@ -426,34 +455,46 @@ const Signup: React.FC = () => {
         />
       </div>
 
+      <div>
+        <label className="block text-sm font-semibold text-slate-700 mb-2">Phone</label>
+        <div className="flex items-center border border-slate-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-teal-500">
+          <div className="flex items-center px-3 py-3 bg-slate-50 border-r border-slate-200 text-slate-600 font-medium">
+            <span className="mr-1.5">🇰🇪</span>
+            <span>+254</span>
+          </div>
+          <input
+            type="tel"
+            value={formData.orgPhone.replace('+254', '')}
+            onChange={(e) => {
+              const input = e.target.value.replace(/[^\d]/g, '').substring(0, 9);
+              const normalized = input ? `+254${input}` : '';
+              updateFormData('orgPhone', normalized);
+              setOrgPhoneValid(input.length === 0 || input.length === 9);
+            }}
+            className="flex-1 px-3 py-3 outline-none"
+            placeholder="712 345 678"
+            maxLength={11}
+          />
+        </div>
+        {formData.orgPhone && !orgPhoneValid && (
+          <p className="text-xs text-red-500 mt-1">Enter 9 digits after +254</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-slate-700 mb-2">Street address or landmark <span className="text-red-500">*</span></label>
+        <input
+          type="text"
+          value={formData.orgAddress}
+          onChange={(e) => updateFormData('orgAddress', e.target.value)}
+          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+          placeholder="e.g. Westlands, Mpaka Road"
+        />
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">Phone</label>
-          <div className="flex items-center border border-slate-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-teal-500">
-            <div className="flex items-center px-3 py-3 bg-slate-50 border-r border-slate-200 text-slate-600 font-medium">
-              <span className="mr-1.5">🇰🇪</span>
-              <span>+254</span>
-            </div>
-            <input
-              type="tel"
-              value={formData.orgPhone.replace('+254', '')}
-              onChange={(e) => {
-                const input = e.target.value.replace(/[^\d]/g, '').substring(0, 9);
-                const normalized = input ? `+254${input}` : '';
-                updateFormData('orgPhone', normalized);
-                setOrgPhoneValid(input.length === 0 || input.length === 9);
-              }}
-              className="flex-1 px-3 py-3 outline-none"
-              placeholder="712 345 678"
-              maxLength={11}
-            />
-          </div>
-          {formData.orgPhone && !orgPhoneValid && (
-            <p className="text-xs text-red-500 mt-1">Enter 9 digits after +254</p>
-          )}
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">City</label>
+          <label className="block text-sm font-semibold text-slate-700 mb-2">City/Town <span className="text-red-500">*</span></label>
           <input
             type="text"
             value={formData.orgCity}
@@ -462,17 +503,17 @@ const Signup: React.FC = () => {
             placeholder="Nairobi"
           />
         </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-semibold text-slate-700 mb-2">Address</label>
-        <input
-          type="text"
-          value={formData.orgAddress}
-          onChange={(e) => updateFormData('orgAddress', e.target.value)}
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-          placeholder="Street address"
-        />
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-2">Country <span className="text-red-500">*</span></label>
+          <input
+            type="text"
+            value={formData.orgCountry}
+            onChange={(e) => updateFormData('orgCountry', e.target.value)}
+            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-slate-50"
+            placeholder="Kenya"
+            readOnly
+          />
+        </div>
       </div>
     </div>
   );
@@ -645,9 +686,20 @@ const Signup: React.FC = () => {
         />
       </div>
 
+      <div>
+        <label className="block text-sm font-semibold text-slate-700 mb-2">Street address or landmark <span className="text-red-500">*</span></label>
+        <input
+          type="text"
+          value={formData.locationAddress}
+          onChange={(e) => updateFormData('locationAddress', e.target.value)}
+          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+          placeholder="e.g. Westlands, Mpaka Road"
+        />
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">City</label>
+          <label className="block text-sm font-semibold text-slate-700 mb-2">City/Town <span className="text-red-500">*</span></label>
           <input
             type="text"
             value={formData.locationCity}
@@ -657,41 +709,42 @@ const Signup: React.FC = () => {
           />
         </div>
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">Phone</label>
-          <div className="flex items-center border border-slate-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-teal-500">
-            <div className="flex items-center px-3 py-3 bg-slate-50 border-r border-slate-200 text-slate-600 font-medium">
-              <span className="mr-1.5">🇰🇪</span>
-              <span>+254</span>
-            </div>
-            <input
-              type="tel"
-              value={formData.locationPhone.replace('+254', '')}
-              onChange={(e) => {
-                const input = e.target.value.replace(/[^\d]/g, '').substring(0, 9);
-                const normalized = input ? `+254${input}` : '';
-                updateFormData('locationPhone', normalized);
-                setLocPhoneValid(input.length === 0 || input.length === 9);
-              }}
-              className="flex-1 px-3 py-3 outline-none"
-              placeholder="712 345 678"
-              maxLength={11}
-            />
-          </div>
-          {formData.locationPhone && !locPhoneValid && (
-            <p className="text-xs text-red-500 mt-1">Enter 9 digits after +254</p>
-          )}
+          <label className="block text-sm font-semibold text-slate-700 mb-2">Country <span className="text-red-500">*</span></label>
+          <input
+            type="text"
+            value={formData.locationCountry}
+            onChange={(e) => updateFormData('locationCountry', e.target.value)}
+            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-slate-50"
+            placeholder="Kenya"
+            readOnly
+          />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-slate-700 mb-2">Address</label>
-        <input
-          type="text"
-          value={formData.locationAddress}
-          onChange={(e) => updateFormData('locationAddress', e.target.value)}
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-          placeholder="Street address"
-        />
+        <label className="block text-sm font-semibold text-slate-700 mb-2">Phone</label>
+        <div className="flex items-center border border-slate-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-teal-500">
+          <div className="flex items-center px-3 py-3 bg-slate-50 border-r border-slate-200 text-slate-600 font-medium">
+            <span className="mr-1.5">🇰🇪</span>
+            <span>+254</span>
+          </div>
+          <input
+            type="tel"
+            value={formData.locationPhone.replace('+254', '')}
+            onChange={(e) => {
+              const input = e.target.value.replace(/[^\d]/g, '').substring(0, 9);
+              const normalized = input ? `+254${input}` : '';
+              updateFormData('locationPhone', normalized);
+              setLocPhoneValid(input.length === 0 || input.length === 9);
+            }}
+            className="flex-1 px-3 py-3 outline-none"
+            placeholder="712 345 678"
+            maxLength={11}
+          />
+        </div>
+        {formData.locationPhone && !locPhoneValid && (
+          <p className="text-xs text-red-500 mt-1">Enter 9 digits after +254</p>
+        )}
       </div>
 
       <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">

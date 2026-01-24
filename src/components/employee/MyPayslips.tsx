@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { payrollService } from '../../lib/services';
 import type { PayrollPeriod, PayrollEntry } from '../../types';
 import { formatDateKE } from '../../lib/utils/dateFormat';
+import { useTrialStatus, AccessBlockedOverlay } from '../../context/TrialContext';
 
 // Helper to format currency
 const formatCurrency = (cents: number) => {
@@ -85,6 +86,14 @@ const PayHistoryRow: React.FC<{ period: PayrollPeriod; user: any; onView: () => 
 
 const MyPayslips: React.FC = () => {
     const { user } = useAuth();
+    
+    // CRITICAL: Verification Gating - Check FIRST before any state or hooks
+    const { isVerified } = useTrialStatus();
+
+    if (!isVerified) {
+        return <AccessBlockedOverlay reason="verification" />;
+    }
+
     const [loading, setLoading] = useState(true);
     const [periods, setPeriods] = useState<PayrollPeriod[]>([]);
     const [filteredPeriods, setFilteredPeriods] = useState<PayrollPeriod[]>([]);
@@ -103,8 +112,6 @@ const MyPayslips: React.FC = () => {
     const [payslipDetails, setPayslipDetails] = useState<PayrollEntry | null>(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [error, setError] = useState('');
-
-
 
     useEffect(() => {
         if (user?.organizationId) {

@@ -186,9 +186,11 @@ export const adminService = {
 
             // Update the target entity
             if (verification.type === 'ORG' && verification.organizationId) {
+                const verifiedDate = new Date().toISOString();
                 await updateDoc(docs.organization(verification.organizationId), {
                     orgStatus: 'Verified' as VerificationStatus,
-                    verifiedAt: new Date().toISOString(),
+                    verifiedAt: verifiedDate,
+                    approvedAt: verifiedDate, // For trial calculation
                     updatedAt: serverTimestamp()
                 });
             } else if (verification.type === 'FACILITY' && verification.locationId && verification.organizationId) {

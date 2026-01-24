@@ -26,6 +26,7 @@ const ReportsView: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [locations, setLocations] = useState<Location[]>([]);
     const [showFinancials, setShowFinancials] = useState(false);
+    const [renderError, setRenderError] = useState<string | null>(null);
 
     // Filters
     const [filters, setFilters] = useState<ReportFilters>({
@@ -61,8 +62,9 @@ const ReportsView: React.FC = () => {
         try {
             const locs = await organizationService.getLocations(user.organizationId);
             setLocations(locs);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error loading locations:', error);
+            setRenderError(error.message || 'Failed to load locations');
         }
     };
 
@@ -96,8 +98,9 @@ const ReportsView: React.FC = () => {
                     break;
             }
             setReportData(data);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error loading report:', error);
+            setRenderError(error.message || 'Failed to load report data');
         } finally {
             setLoading(false);
         }
@@ -206,8 +209,24 @@ const ReportsView: React.FC = () => {
     };
 
     const getReportData = () => {
-        return reportData;
+        return reportData || [];
     };
+
+    if (renderError) {
+        return (
+            <div className="p-8 text-center">
+                <div className="text-4xl mb-4">⚠️</div>
+                <h3 className="text-xl font-bold text-red-600 mb-2">Something went wrong</h3>
+                <p className="text-slate-600 mb-4">{renderError}</p>
+                <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900"
+                >
+                    Reload Page
+                </button>
+            </div>
+        );
+    }
 
     // Render filter panel
     const renderFilters = () => (
@@ -428,9 +447,9 @@ const ReportsView: React.FC = () => {
                                 <td className="px-4 py-3 text-sm text-slate-600">{row.date}</td>
                                 <td className="px-4 py-3 text-sm text-slate-600">{row.clockIn || '-'}</td>
                                 <td className="px-4 py-3 text-sm text-slate-600">{row.clockOut || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-slate-600">{row.actualHours.toFixed(1)}h</td>
-                                <td className="px-4 py-3 text-sm text-teal-600 font-medium">{row.overtimeHours > 0 ? `+ ${row.overtimeHours.toFixed(1)} h` : '-'}</td>
-                                <td className="px-4 py-3 text-sm text-red-600">{row.lateMinutes > 0 ? `${row.lateMinutes} m` : '-'}</td>
+                                <td className="px-4 py-3 text-sm text-slate-600">{(row.actualHours || 0).toFixed(1)}h</td>
+                                <td className="px-4 py-3 text-sm text-teal-600 font-medium">{(row.overtimeHours || 0) > 0 ? `+ ${(row.overtimeHours || 0).toFixed(1)} h` : '-'}</td>
+                                <td className="px-4 py-3 text-sm text-red-600">{(row.lateMinutes || 0) > 0 ? `${row.lateMinutes} m` : '-'}</td>
                                 <td className="px-4 py-3">
                                     <span className={`px - 2 py - 1 text - xs font - medium rounded - full ${row.status === 'Present' ? 'bg-green-100 text-green-700' :
                                         row.status === 'Absent' ? 'bg-red-100 text-red-700' :
@@ -474,22 +493,22 @@ const ReportsView: React.FC = () => {
                                 <td className="px-4 py-3 text-sm text-slate-600">{row.periodName}</td>
                                 <td className="px-4 py-3 text-sm text-slate-600">
                                     <PrivacyMask isVisible={showFinancials}>
-                                        KES {(row.baseSalaryCents / 100).toLocaleString()}
+                                        KES {((row.baseSalaryCents || 0) / 100).toLocaleString()}
                                     </PrivacyMask>
                                 </td>
                                 <td className="px-4 py-3 text-sm text-green-600">
                                     <PrivacyMask isVisible={showFinancials}>
-                                        +KES {(row.allowancesTotalCents / 100).toLocaleString()}
+                                        +KES {((row.allowancesTotalCents || 0) / 100).toLocaleString()}
                                     </PrivacyMask>
                                 </td>
                                 <td className="px-4 py-3 text-sm text-red-600">
                                     <PrivacyMask isVisible={showFinancials}>
-                                        -KES {(row.deductionsTotalCents / 100).toLocaleString()}
+                                        -KES {((row.deductionsTotalCents || 0) / 100).toLocaleString()}
                                     </PrivacyMask>
                                 </td>
                                 <td className="px-4 py-3 text-sm font-bold text-slate-900">
                                     <PrivacyMask isVisible={showFinancials}>
-                                        KES {(row.netPayCents / 100).toLocaleString()}
+                                        KES {((row.netPayCents || 0) / 100).toLocaleString()}
                                     </PrivacyMask>
                                 </td>
                                 <td className="px-4 py-3">

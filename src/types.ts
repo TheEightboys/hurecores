@@ -119,6 +119,7 @@ export interface Organization {
   logoUrl?: string;
   rejectionReason?: string;
   approvedAt?: string;
+  verifiedAt?: string; // Set when Super Admin approves verification
   createdAt: string;
   updatedAt: string;
 }
