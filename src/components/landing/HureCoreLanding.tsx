@@ -249,7 +249,7 @@ export default function HureCoreLanding() {
                     <div className="flex flex-col items-center text-center lg:items-start lg:text-left max-w-3xl mx-auto lg:mx-0">
                         <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-teal-50 border border-teal-100 px-4 py-1.5 text-xs font-bold text-teal-700 shadow-sm">
                             <span className="flex h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
-                            New: Healthcare workforce management, done right
+                            Healthcare workforce management, done right
                         </div>
 
                         <h1 className="text-5xl lg:text-7xl font-display font-extrabold tracking-tight text-slate-900 leading-[1.05]">
@@ -286,7 +286,7 @@ export default function HureCoreLanding() {
             <SectionShell id="features" className="!py-12 lg:!py-16">
                 <div className="text-center max-w-3xl mx-auto mb-12">
                     <h2 className="text-base font-bold tracking-widest text-teal-600 uppercase mb-3">features</h2>
-                    <h3 className="text-5xl lg:text-6xl font-display font-extrabold text-slate-900">Everything you need to run a modern workforce</h3>
+                    <h3 className="text-8xl lg:text-9xl font-display font-extrabold text-slate-900">Everything you need to run a modern workforce</h3>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -304,8 +304,8 @@ export default function HureCoreLanding() {
                                 <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm text-teal-600 mb-6 group-hover:scale-110 transition-transform duration-300">
                                     <Icon name={f.icon} className="w-6 h-6" />
                                 </div>
-                                <h3 className="text-xl font-bold text-slate-900 mb-2">{f.title}</h3>
-                                <p className="text-slate-600 leading-relaxed">{f.desc}</p>
+                                <h3 className="text-[17px] font-bold text-slate-900 mb-2">{f.title}</h3>
+                                <p className="text-[13.6px] text-slate-600 leading-relaxed">{f.desc}</p>
                             </div>
                         </div>
                     ))}
@@ -387,10 +387,12 @@ export default function HureCoreLanding() {
             < SectionShell id="faqs" >
                 <div className="grid lg:grid-cols-12 gap-12 items-start">
                     <div className="lg:col-span-4">
-                        <h2 className="text-sm font-bold tracking-widest text-teal-600 uppercase mb-3">Support</h2>
-                        <h3 className="text-3xl font-display font-extrabold text-slate-900 mb-4">Frequently Asked Questions</h3>
+                        <h2 className="text-base font-bold tracking-widest text-teal-600 uppercase mb-3">Support</h2>
+                        <h3 className="text-6xl font-display font-extrabold text-slate-900 mb-4">Frequently Asked Questions</h3>
                         <p className="text-slate-600 mb-8">Can't find the answer you're looking for?</p>
-                        <SecondaryButton onClick={() => navTo("contact")}>Contact Support</SecondaryButton>
+                        <a href="mailto:info@gethure.com" className="inline-block px-8 py-4 border-2 border-slate-300 text-slate-900 rounded-xl font-bold text-sm transition-all duration-200 hover:border-teal-600 hover:text-teal-600 hover:shadow-lg">
+                            Contact Support
+                        </a>
                     </div>
 
                     <div className="lg:col-span-8 space-y-4">
@@ -431,8 +433,8 @@ export default function HureCoreLanding() {
                             <div>
                                 <h4 className="font-bold text-white mb-6">Legal</h4>
                                 <ul className="space-y-4 text-sm text-slate-400">
-                                    <li><button className="hover:text-teal-400 transition-colors">Privacy Policy</button></li>
-                                    <li><button className="hover:text-teal-400 transition-colors">Terms of Service</button></li>
+                                    <li><button onClick={() => navigate('/privacy-policy')} className="hover:text-teal-400 transition-colors">Privacy Policy</button></li>
+                                    <li><button onClick={() => navigate('/terms-of-service')} className="hover:text-teal-400 transition-colors">Terms of Service</button></li>
                                 </ul>
                             </div>
                         </div>

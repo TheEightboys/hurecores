@@ -45,7 +45,7 @@ const FAQ: React.FC = () => {
                     {faqs.map((faq, index) => (
                         <div
                             key={index}
-                            className={`bg-white rounded-2xl border transition-all duration-300 ${openIndex === index ? 'border-blue-600 shadow-md ring-4 ring-blue-50' : 'border-slate-200 hover:border-blue-300'}`}
+                            className={`bg-white rounded-2xl border transition-all duration-300 hover:-translate-y-1 ${openIndex === index ? 'border-blue-600 shadow-md ring-4 ring-blue-50' : 'border-slate-200 hover:border-blue-300 hover:shadow-lg'}`}
                         >
                             <button
                                 onClick={() => toggleFAQ(index)}

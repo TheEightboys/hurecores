@@ -33,7 +33,7 @@ const Pricing: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {PLANS.map((p, i) => (
-                        <div key={i} className={`p-10 rounded-3xl border flex flex-col transition-all duration-300 ${p.popular ? 'border-blue-600 ring-4 ring-blue-50/50 shadow-xl relative scale-105 z-10' : 'border-slate-200 hover:border-blue-300 hover:shadow-lg'}`}>
+                        <div key={i} className={`p-10 rounded-3xl border flex flex-col transition-all duration-300 hover:-translate-y-2 ${p.popular ? 'border-blue-600 ring-4 ring-blue-50/50 shadow-xl relative scale-105 z-10 hover:shadow-2xl' : 'border-slate-200 hover:border-blue-300 hover:shadow-xl'}`}>
                             {p.popular && <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest shadow-md">Most Popular</div>}
 
                             <div className="mb-8">

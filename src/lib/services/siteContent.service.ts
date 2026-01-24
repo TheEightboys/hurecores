@@ -34,7 +34,7 @@ export const DEFAULT_LANDING_CONTENT: LandingPageContent = {
     heroHeadlineHighlight: "clinic workforce operations",
     heroBody:
         "HURE Core is the operating system for clinic workforce management — built to manage staff, schedules, attendance, leave, payroll-ready exports, and compliance for single-location or multi-location clinics in one secure system.",
-    heroNote: "Designed for small to mid-sized healthcare clinics looking to simplify workforce operations.",
+    heroNote: "Healthcare workforce management, done right",
 
     pricingEyebrow: "FLEXIBLE PRICING",
     pricingTitle: "Simple, transparent plans",

@@ -10,6 +10,8 @@ import EmployerDashboard from './pages/EmployerDashboard';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import SuperAdminLogin from './pages/SuperAdminLogin';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 const AppRoutes: React.FC = () => {
@@ -32,6 +34,8 @@ const AppRoutes: React.FC = () => {
       <Route path="/signup" element={<Signup />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />
       <Route path="/super-login" element={<SuperAdminLogin />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      <Route path="/terms-of-service" element={<TermsOfService />} />
 
       {/* Protected Employer Routes - ONLY for OWNER */}
       <Route
