@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { siteContentService, DEFAULT_LANDING_CONTENT } from "../../lib/services/siteContent.service";
+import ContactModal from "../common/ContactModal";
 import heroImg from "../../assets/hero.jpg";
 // import { motion, AnimatePresence } from "framer-motion"; // REMOVED
 
@@ -184,6 +185,7 @@ export default function HureCoreLanding() {
     const [toast, setToast] = useState({ open: false, title: "", body: "" });
     const [content, setContent] = useState(() => DEFAULT_LANDING_CONTENT);
     const [faqOpen, setFaqOpen] = useState(0);
+    const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
     // Load content
     useEffect(() => {
@@ -285,8 +287,8 @@ export default function HureCoreLanding() {
             {/* BENTO GRID FEATURES */}
             <SectionShell id="features" className="!py-12 lg:!py-16">
                 <div className="text-center max-w-3xl mx-auto mb-12">
-                    <h2 className="text-base font-bold tracking-widest text-teal-600 uppercase mb-3">features</h2>
-                    <h3 className="text-8xl lg:text-9xl font-display font-extrabold text-slate-900">Everything you need to run a modern workforce</h3>
+                    <h2 className="text-4xl font-bold tracking-widest text-teal-600 uppercase mb-3">features</h2>
+                    <h3 className="text-3xl lg:text-4xl font-display font-extrabold text-slate-900">Everything you need to run a modern workforce</h3>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -304,8 +306,8 @@ export default function HureCoreLanding() {
                                 <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm text-teal-600 mb-6 group-hover:scale-110 transition-transform duration-300">
                                     <Icon name={f.icon} className="w-6 h-6" />
                                 </div>
-                                <h3 className="text-[17px] font-bold text-slate-900 mb-2">{f.title}</h3>
-                                <p className="text-[13.6px] text-slate-600 leading-relaxed">{f.desc}</p>
+                                <h3 className="text-2xl font-bold text-slate-900 mb-3">{f.title}</h3>
+                                <p className="text-xs text-slate-500 leading-relaxed">{f.desc}</p>
                             </div>
                         </div>
                     ))}
@@ -324,9 +326,9 @@ export default function HureCoreLanding() {
                 </div>
 
                 <div className="text-center max-w-3xl mx-auto mb-16">
-                    <h2 className="text-sm font-bold tracking-widest text-teal-600 uppercase mb-3">{content.pricingEyebrow || DEFAULT_LANDING_CONTENT.pricingEyebrow}</h2>
-                    <h3 className="text-5xl lg:text-6xl font-display font-extrabold text-slate-900">{content.pricingTitle || DEFAULT_LANDING_CONTENT.pricingTitle}</h3>
-                    <p className="mt-4 text-slate-600 text-lg">{content.pricingNote || DEFAULT_LANDING_CONTENT.pricingNote}</p>
+                    <h2 className="text-6xl font-bold tracking-widest text-teal-600 uppercase mb-3">{content.pricingEyebrow || DEFAULT_LANDING_CONTENT.pricingEyebrow}</h2>
+                    <h3 className="text-4xl lg:text-5xl font-display font-extrabold text-slate-900">{content.pricingTitle || DEFAULT_LANDING_CONTENT.pricingTitle}</h3>
+                    <p className="mt-4 text-slate-600 text-sm">{content.pricingNote || DEFAULT_LANDING_CONTENT.pricingNote}</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
@@ -387,12 +389,15 @@ export default function HureCoreLanding() {
             < SectionShell id="faqs" >
                 <div className="grid lg:grid-cols-12 gap-12 items-start">
                     <div className="lg:col-span-4">
-                        <h2 className="text-base font-bold tracking-widest text-teal-600 uppercase mb-3">Support</h2>
-                        <h3 className="text-6xl font-display font-extrabold text-slate-900 mb-4">Frequently Asked Questions</h3>
+                        <h2 className="text-2xl font-bold tracking-widest text-teal-600 uppercase mb-3">Support</h2>
+                        <h3 className="text-4xl lg:text-5xl font-display font-extrabold text-slate-900 mb-4">Frequently Asked Questions</h3>
                         <p className="text-slate-600 mb-8">Can't find the answer you're looking for?</p>
-                        <a href="mailto:info@gethure.com" className="inline-block px-8 py-4 border-2 border-slate-300 text-slate-900 rounded-xl font-bold text-sm transition-all duration-200 hover:border-teal-600 hover:text-teal-600 hover:shadow-lg">
+                        <button 
+                            onClick={() => setIsContactModalOpen(true)}
+                            className="inline-block px-8 py-4 border-2 border-slate-300 text-slate-900 rounded-xl font-bold text-sm transition-all duration-200 hover:border-teal-600 hover:text-teal-600 hover:shadow-lg"
+                        >
                             Contact Support
-                        </a>
+                        </button>
                     </div>
 
                     <div className="lg:col-span-8 space-y-4">
@@ -466,6 +471,8 @@ export default function HureCoreLanding() {
                     </div>
                 )
             }
+
+            <ContactModal isOpen={isContactModalOpen} onClose={() => setIsContactModalOpen(false)} />
         </div >
     );
 }

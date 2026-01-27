@@ -42,7 +42,8 @@ export const adminService = {
 
         orgsSnapshot.forEach(doc => {
             const data = doc.data();
-            if (data.orgStatus === 'Verified') {
+            // Count both 'Verified' (approved) and 'Active' (approved + enabled) as verified
+            if (data.orgStatus === 'Verified' || data.orgStatus === 'Active') {
                 verifiedOrganizations++;
             }
             const plan = data.plan || 'Essential';

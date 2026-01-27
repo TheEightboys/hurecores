@@ -183,7 +183,8 @@ const OrgDetails: React.FC<{ selectedLocationId?: string }> = ({ selectedLocatio
     const getFacilityStatus = (location: Location): { status: string; color: string } => {
         const isExpired = location.licenseExpiry && new Date(location.licenseExpiry) < new Date();
         if (isExpired) return { status: 'Expired', color: 'bg-red-100 text-red-700' };
-        if (location.status === 'Verified') return { status: 'Approved', color: 'bg-emerald-100 text-emerald-700' };
+        // Both 'Verified' (approved) and 'Active' (approved + enabled) mean approved
+        if (location.status === 'Verified' || location.status === 'Active') return { status: 'Approved', color: 'bg-emerald-100 text-emerald-700' };
         if (location.status === 'Pending') return { status: 'Pending', color: 'bg-amber-100 text-amber-700' };
         return { status: 'Draft', color: 'bg-slate-100 text-slate-600' };
     };
@@ -213,11 +214,11 @@ const OrgDetails: React.FC<{ selectedLocationId?: string }> = ({ selectedLocatio
     console.log('[DEBUG OrgDetails] All locations:', locations.map(l => ({ id: l.id, name: l.name })));
     console.log('[DEBUG OrgDetails] Filtered visibleLocations:', visibleLocations.length, 'items:', visibleLocations.map(l => l.name));
 
-    // Compliance summary
+    // Compliance summary - org is verified if 'Verified' (approved) or 'Active' (approved + enabled)
     const complianceSummary = {
-        org: org?.orgStatus === 'Verified',
+        org: org?.orgStatus === 'Verified' || org?.orgStatus === 'Active',
         facilities: {
-            approved: visibleLocations.filter(l => l.status === 'Verified' && !(l.licenseExpiry && new Date(l.licenseExpiry) < new Date())).length,
+            approved: visibleLocations.filter(l => (l.status === 'Verified' || l.status === 'Active') && !(l.licenseExpiry && new Date(l.licenseExpiry) < new Date())).length,
             pending: visibleLocations.filter(l => l.status === 'Pending').length,
             expired: visibleLocations.filter(l => l.licenseExpiry && new Date(l.licenseExpiry) < new Date()).length,
             draft: visibleLocations.filter(l => l.status === 'Unverified' && !l.licenseNumber).length
@@ -397,10 +398,10 @@ const OrgDetails: React.FC<{ selectedLocationId?: string }> = ({ selectedLocatio
 
                         <button
                             type="submit"
-                            disabled={org?.orgStatus === 'Verified'}
+                            disabled={org?.orgStatus === 'Verified' || org?.orgStatus === 'Active'}
                             className="w-full px-6 py-3 bg-[#1a2e35] text-[#4fd1c5] rounded-xl font-bold hover:bg-[#152428] disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-colors"
                         >
-                            {org?.orgStatus === 'Verified' ? '✓ Verified' :
+                            {(org?.orgStatus === 'Verified' || org?.orgStatus === 'Active') ? '✓ Verified' :
                                 org?.orgStatus === 'Pending' ? 'Submit for Review' : 'Submit for Verification'}
                         </button>
                     </form>

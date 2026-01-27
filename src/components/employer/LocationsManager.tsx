@@ -136,7 +136,8 @@ const LocationsManager: React.FC<LocationsManagerProps> = ({ onLocationUpdate, s
     const getStatusBadge = (loc: Location) => {
         const expired = isLicenseExpired(loc.licenseExpiry);
         if (expired) return { label: 'Expired', color: 'bg-red-100 text-red-700 border-red-200' };
-        if (loc.status === 'Verified') return { label: 'Approved', color: 'bg-[#e0f2f1] text-[#0f766e] border-[#4fd1c5]/30' };
+        // Both 'Verified' (approved) and 'Active' (approved + enabled) mean approved
+        if (loc.status === 'Verified' || loc.status === 'Active') return { label: 'Approved', color: 'bg-[#e0f2f1] text-[#0f766e] border-[#4fd1c5]/30' };
         if (loc.status === 'Pending') return { label: 'Pending', color: 'bg-amber-100 text-amber-700 border-amber-200' };
         return { label: 'Draft', color: 'bg-slate-100 text-slate-600 border-slate-200' };
     };
@@ -273,7 +274,7 @@ const LocationsManager: React.FC<LocationsManagerProps> = ({ onLocationUpdate, s
                                         <div className="w-full lg:w-1/2 bg-slate-50 rounded-xl p-6 border border-slate-100">
                                             <h4 className="font-bold text-slate-900 text-sm mb-4 border-b border-slate-200 pb-2">Facility Verification</h4>
 
-                                            {loc.status === 'Verified' && !isLicenseExpired(loc.licenseExpiry) ? (
+                                            {(loc.status === 'Verified' || loc.status === 'Active') && !isLicenseExpired(loc.licenseExpiry) ? (
                                                 <div className="space-y-2">
                                                     <div className="flex items-center text-green-700 text-sm font-bold bg-green-50 p-2 rounded-lg mb-3">
                                                         <span className="mr-2">✓</span> License Valid

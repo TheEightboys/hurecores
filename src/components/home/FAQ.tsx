@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ContactModal from '../common/ContactModal';
 
 const FAQ: React.FC = () => {
     const faqs = [
@@ -25,6 +26,7 @@ const FAQ: React.FC = () => {
     ];
 
     const [openIndex, setOpenIndex] = useState<number | null>(null);
+    const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
     const toggleFAQ = (index: number) => {
         setOpenIndex(openIndex === index ? null : index);
@@ -34,7 +36,7 @@ const FAQ: React.FC = () => {
         <section id="resources" className="py-24 bg-slate-50">
             <div className="max-w-3xl mx-auto px-6">
                 <div className="text-center mb-16">
-                    <h2 className="text-blue-600 font-bold tracking-wide uppercase text-sm mb-3">FAQ</h2>
+                    <h2 className="text-blue-600 font-bold tracking-widest uppercase text-2xl mb-3">Support</h2>
                     <h3 className="text-3xl md:text-5xl font-bold text-slate-900 font-display mb-6">Frequently Asked Questions</h3>
                     <p className="text-xl text-slate-500 leading-relaxed">
                         Have questions? We're here to help.
@@ -66,7 +68,19 @@ const FAQ: React.FC = () => {
                         </div>
                     ))}
                 </div>
+
+                <div className="mt-12 text-center">
+                    <p className="text-slate-600 mb-6">Can't find the answer you're looking for?</p>
+                    <button
+                        onClick={() => setIsContactModalOpen(true)}
+                        className="inline-block px-8 py-4 border-2 border-slate-300 text-slate-900 rounded-xl font-bold text-sm transition-all duration-200 hover:border-blue-600 hover:text-blue-600 hover:shadow-lg"
+                    >
+                        Contact Support
+                    </button>
+                </div>
             </div>
+
+            <ContactModal isOpen={isContactModalOpen} onClose={() => setIsContactModalOpen(false)} />
         </section>
     );
 };

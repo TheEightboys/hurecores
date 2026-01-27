@@ -37,9 +37,9 @@ const Features: React.FC = () => {
     return (
         <section id="features" className="py-24 bg-slate-50 relative overflow-hidden">
             <div className="max-w-7xl mx-auto px-6 relative z-10">
-                <div className="text-center max-w-3xl mx-auto mb-20">
-                    <h2 className="text-blue-600 font-bold tracking-wide uppercase text-sm mb-3">Powerful Features</h2>
-                    <h3 className="text-3xl md:text-5xl font-bold text-slate-900 font-display mb-6">Everything you need to run a modern workforce</h3>
+                <div className="text-center max-w-6xl mx-auto mb-20">
+                    <h2 className="text-blue-600 font-bold tracking-widest uppercase text-2xl mb-3">Features</h2>
+                    <h3 className="text-4xl md:text-5xl font-display font-extrabold tracking-tight text-slate-900 leading-tight md:whitespace-nowrap mb-6">Everything you need to run a modern workforce</h3>
                     <p className="text-xl text-slate-500 leading-relaxed">
                         HURE Core gives you the tools to manage your staff efficiently, so you can focus on delivering great care.
                     </p>

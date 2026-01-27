@@ -92,8 +92,9 @@ const DashboardHome: React.FC = () => {
         { label: 'Export Payroll', icon: '💰', color: 'bg-slate-800', href: '#/employer/payroll', requiresCompliance: true },
     ];
 
-    const verifiedLocations = locations.filter(l => l.status === 'Verified').length;
-    const isCompliant = org?.orgStatus === 'Verified';
+    const verifiedLocations = locations.filter(l => l.status === 'Verified' || l.status === 'Active').length;
+    // Organization is compliant if orgStatus is 'Verified' (approved) or 'Active' (approved + enabled)
+    const isCompliant = org?.orgStatus === 'Verified' || org?.orgStatus === 'Active';
 
     if (loading) {
         return (
@@ -110,8 +111,8 @@ const DashboardHome: React.FC = () => {
                 <span className="text-sm text-slate-500">Last updated: Just now</span>
             </div>
 
-            {/* Verification Banner - Show if not verified */}
-            {org && org.orgStatus !== 'Verified' && (
+            {/* Verification Banner - Show if not verified (Verified or Active means verified) */}
+            {org && org.orgStatus !== 'Verified' && org.orgStatus !== 'Active' && (
                 <div className={`border rounded-2xl p-6 flex items-start justify-between ${org.orgStatus === 'Rejected' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'
                     }`}>
                     <div className="flex items-start space-x-4">

@@ -122,7 +122,8 @@ export const TrialProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const isTrial = subscription?.status === 'Trial' || (!subscription?.status && !trialInfo.isExpired);
     const isActive = subscription?.status === 'Active';
     const isInactive = trialInfo.isExpired && !isActive;
-    const isVerified = organization?.orgStatus === 'Verified';
+    // Organization is verified if orgStatus is 'Verified' (approved) or 'Active' (approved + enabled)
+    const isVerified = organization?.orgStatus === 'Verified' || organization?.orgStatus === 'Active';
 
     // Access control rules
     // During trial (Day 1-10): Full operational access, but payout/invoice/export blocked

@@ -9,7 +9,7 @@ const Pricing: React.FC = () => {
         <section id="pricing" className="py-24 bg-white">
             <div className="max-w-7xl mx-auto px-6">
                 <div className="text-center max-w-3xl mx-auto mb-16">
-                    <h2 className="text-blue-600 font-bold tracking-wide uppercase text-sm mb-3">Flexible Pricing</h2>
+                    <h2 className="text-blue-600 font-bold tracking-widest uppercase text-2xl mb-3">Flexible Pricing</h2>
                     <h3 className="text-3xl md:text-5xl font-bold text-slate-900 font-display mb-6">Simple, Transparent Plans</h3>
                     <p className="text-xl text-slate-500 leading-relaxed mb-8">
                         Choose the plan that fits your clinic's stage of growth. No hidden fees.
