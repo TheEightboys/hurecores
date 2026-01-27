@@ -595,7 +595,7 @@ const Signup: React.FC = () => {
     <div className="space-y-6">
       <div className="text-center mb-6">
         <h2 className="text-xl font-bold text-slate-900">Choose Your Plan</h2>
-        <p className="text-slate-500 mt-1">Start with a 14-day free trial</p>
+        <p className="text-slate-500 mt-1">Start with a 10-day free trial</p>
       </div>
 
       <div className="space-y-4">

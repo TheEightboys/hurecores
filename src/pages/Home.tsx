@@ -23,7 +23,7 @@ const Home: React.FC = () => {
 
         <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 font-display">Ready to modernize your clinic?</h2>
-          <p className="text-xl text-blue-100 mb-10 leading-relaxed">Join thousands of healthcare professionals who trust HURE Core for their staff management. Start your 14-day free trial today.</p>
+          <p className="text-xl text-blue-100 mb-10 leading-relaxed">Join thousands of healthcare professionals who trust HURE Core for their staff management. Start your 10-day free trial today.</p>
           <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-6">
             <button className="w-full sm:w-auto px-10 py-5 bg-white text-blue-600 text-xl font-bold rounded-2xl shadow-xl hover:bg-blue-50 transition-all transform hover:-translate-y-1">Get Started Now</button>
             <button className="w-full sm:w-auto px-10 py-5 bg-transparent border-2 border-white/30 text-white text-xl font-bold rounded-2xl hover:bg-white/10 transition-all">Contact Sales</button>

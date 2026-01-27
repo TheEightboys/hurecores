@@ -14,7 +14,7 @@ const EmployerSidebar: React.FC<EmployerSidebarProps> = ({ isOpen, setIsOpen, us
             title: 'Main',
             items: [
                 { name: 'Dashboard', icon: NAVIGATION_ICONS.Dashboard, path: '/employer', end: true },
-                { name: 'Staff', icon: NAVIGATION_ICONS.Staff, path: '/employer/staff' },
+                { name: 'Staff Management', icon: NAVIGATION_ICONS.Staff, path: '/employer/staff' },
                 { name: 'Schedule', icon: NAVIGATION_ICONS.Schedule, path: '/employer/schedule' },
                 { name: 'Attendance', icon: NAVIGATION_ICONS.Attendance, path: '/employer/attendance' },
                 { name: 'Leave', icon: NAVIGATION_ICONS.Leave, path: '/employer/leave' },

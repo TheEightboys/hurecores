@@ -17,7 +17,7 @@ const FAQ: React.FC = () => {
         },
         {
             question: "How does the free trial work?",
-            answer: "You get full access to the Professional plan for 14 days. No credit card is required to start. At the end of the trial, you can choose a plan that suits you or downgrade to a limited free version."
+            answer: "You get full access to your selected plan for 10 days. No credit card is required to start. At the end of the trial, you can choose a plan that suits you or downgrade to a limited free version."
         },
         {
             question: "Is my data secure?",

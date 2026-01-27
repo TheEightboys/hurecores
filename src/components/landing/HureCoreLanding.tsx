@@ -317,10 +317,10 @@ export default function HureCoreLanding() {
             {/* PRICING */}
             <SectionShell id="pricing" className="bg-slate-50/50">
                 <div className="text-center max-w-4xl mx-auto mb-20 border-b border-slate-200 pb-12">
-                    <h2 className="text-5xl lg:text-6xl font-extrabold text-slate-900 mb-6 font-display">
+                    <h2 className="text-3xl lg:text-4xl font-extrabold text-slate-900 mb-6 font-display">
                         {content.pricingCtaLine1 || DEFAULT_LANDING_CONTENT.pricingCtaLine1}
                     </h2>
-                    <p className="text-xl text-slate-600 leading-relaxed">
+                    <p className="text-base text-slate-600 leading-relaxed">
                         {content.pricingCtaLine2 || DEFAULT_LANDING_CONTENT.pricingCtaLine2}
                     </p>
                 </div>

@@ -1,7 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { organizationService, staffService, scheduleService, attendanceService, leaveService } from '../../lib/services';
-import type { Organization, DashboardStats, Location } from '../../types';
+import type { Organization, DashboardStats, Location, Profile } from '../../types';
+
+// Helper to check if license is expired or expiring soon
+const isLicenseExpired = (expiryDate?: string) => {
+    if (!expiryDate) return false;
+    return new Date(expiryDate) < new Date();
+};
+
+const isLicenseExpiringSoon = (expiryDate?: string, daysThreshold: number = 30) => {
+    if (!expiryDate) return false;
+    const expiry = new Date(expiryDate);
+    const now = new Date();
+    const daysUntilExpiry = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return daysUntilExpiry > 0 && daysUntilExpiry <= daysThreshold;
+};
+
+interface LicenseStats {
+    total: number;
+    valid: number;
+    expired: number;
+    expiringSoon: number;
+    expiringSoonList: { name: string; expiryDate: string; daysLeft: number }[];
+    expiredList: { name: string; expiryDate: string }[];
+}
 
 const DashboardHome: React.FC = () => {
     const { user } = useAuth();
@@ -12,6 +35,7 @@ const DashboardHome: React.FC = () => {
     const [pendingLeave, setPendingLeave] = useState(0);
     const [todayAttendance, setTodayAttendance] = useState({ present: 0, scheduled: 0 });
     const [payrollStatus, setPayrollStatus] = useState({ draft: 0, ready: 0, exported: 0 });
+    const [licenseStats, setLicenseStats] = useState<LicenseStats>({ total: 0, valid: 0, expired: 0, expiringSoon: 0, expiringSoonList: [], expiredList: [] });
 
     useEffect(() => {
         loadDashboardData();
@@ -62,6 +86,35 @@ const DashboardHome: React.FC = () => {
             const pending = await leaveService.getPendingRequests(user.organizationId);
             setPendingLeave(pending.length);
 
+            // Get staff license stats
+            const allStaff = await staffService.getAll(user.organizationId);
+            const staffWithLicenses = allStaff.filter(s => s.license?.type && s.license?.expiryDate);
+            const now = new Date();
+            
+            const expiredList: { name: string; expiryDate: string }[] = [];
+            const expiringSoonList: { name: string; expiryDate: string; daysLeft: number }[] = [];
+            
+            staffWithLicenses.forEach(s => {
+                const expiryDate = s.license?.expiryDate;
+                if (!expiryDate) return;
+                
+                if (isLicenseExpired(expiryDate)) {
+                    expiredList.push({ name: s.fullName || 'Unknown', expiryDate });
+                } else if (isLicenseExpiringSoon(expiryDate, 30)) {
+                    const daysLeft = Math.ceil((new Date(expiryDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                    expiringSoonList.push({ name: s.fullName || 'Unknown', expiryDate, daysLeft });
+                }
+            });
+            
+            setLicenseStats({
+                total: staffWithLicenses.length,
+                valid: staffWithLicenses.length - expiredList.length,
+                expired: expiredList.length,
+                expiringSoon: expiringSoonList.length,
+                expiredList,
+                expiringSoonList: expiringSoonList.sort((a, b) => a.daysLeft - b.daysLeft)
+            });
+
             // TODO: Get payroll status (placeholder for now)
             setPayrollStatus({ draft: 0, ready: 0, exported: 0 });
 
@@ -75,6 +128,7 @@ const DashboardHome: React.FC = () => {
     const getVerificationBadge = (status: string) => {
         switch (status) {
             case 'Verified':
+            case 'Active':
                 return <span className="bg-[#e0f2f1] text-[#0f766e] px-3 py-1 rounded-full text-xs font-bold uppercase border border-[#4fd1c5]/30">Approved</span>;
             case 'Pending':
                 return <span className="bg-[#FEF3C7] text-[#B7791F] px-3 py-1 rounded-full text-xs font-bold uppercase border border-[#B7791F]/20">Pending Review</span>;
@@ -261,11 +315,55 @@ const DashboardHome: React.FC = () => {
                                     <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">👨‍⚕️</div>
                                     <div>
                                         <div className="font-bold text-slate-900">Staff Licenses</div>
-                                        <div className="text-xs text-slate-500">0 licenses added</div>
+                                        <div className="text-xs text-slate-500">
+                                            {licenseStats.total > 0 
+                                                ? `${licenseStats.valid} valid, ${licenseStats.expired} expired${licenseStats.expiringSoon > 0 ? `, ${licenseStats.expiringSoon} expiring soon` : ''}`
+                                                : '0 licenses added'}
+                                        </div>
                                     </div>
                                 </div>
-                                <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-bold uppercase">Not Started</span>
+                                {licenseStats.total === 0 ? (
+                                    <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-bold uppercase">Not Started</span>
+                                ) : licenseStats.expired > 0 ? (
+                                    <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold uppercase border border-red-200">{licenseStats.expired} Expired</span>
+                                ) : licenseStats.expiringSoon > 0 ? (
+                                    <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold uppercase border border-amber-200">{licenseStats.expiringSoon} Expiring Soon</span>
+                                ) : (
+                                    <span className="bg-[#e0f2f1] text-[#0f766e] px-3 py-1 rounded-full text-xs font-bold uppercase border border-[#4fd1c5]/30">All Valid</span>
+                                )}
                             </div>
+
+                            {/* License Expiry Alerts */}
+                            {(licenseStats.expired > 0 || licenseStats.expiringSoon > 0) && (
+                                <div className={`mt-4 p-4 rounded-xl border ${licenseStats.expired > 0 ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+                                    <div className="flex items-start space-x-3">
+                                        <span className="text-lg">{licenseStats.expired > 0 ? '🚨' : '⚠️'}</span>
+                                        <div className="flex-1">
+                                            <h4 className={`font-bold text-sm ${licenseStats.expired > 0 ? 'text-red-800' : 'text-amber-800'}`}>
+                                                {licenseStats.expired > 0 ? 'Staff License Expired' : 'Staff Licenses Expiring Soon'}
+                                            </h4>
+                                            <ul className="mt-2 space-y-1 text-xs">
+                                                {licenseStats.expiredList.slice(0, 3).map((item, idx) => (
+                                                    <li key={idx} className="text-red-700">
+                                                        <span className="font-medium">{item.name}</span> - expired {new Date(item.expiryDate).toLocaleDateString()}
+                                                    </li>
+                                                ))}
+                                                {licenseStats.expiringSoonList.slice(0, 3).map((item, idx) => (
+                                                    <li key={idx} className="text-amber-700">
+                                                        <span className="font-medium">{item.name}</span> - expires in {item.daysLeft} day{item.daysLeft !== 1 ? 's' : ''}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                            <a
+                                                href="#/employer/staff"
+                                                className={`inline-block mt-3 text-xs font-bold ${licenseStats.expired > 0 ? 'text-red-700 hover:text-red-800' : 'text-amber-700 hover:text-amber-800'}`}
+                                            >
+                                                Go to Staff Management →
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
