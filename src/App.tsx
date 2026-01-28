@@ -21,8 +21,7 @@ const AppRoutes: React.FC = () => {
   const isOwner = user?.systemRole === 'OWNER' || user?.role === 'Owner';
 
   // Helper to check if user is Admin (permission-based access via employee dashboard)
-  const isAdmin = user?.systemRole === 'ADMIN' ||
-    ['HR Manager', 'Shift Manager', 'Payroll Officer'].includes(user?.role || '');
+  const isAdmin = user?.systemRole === 'ADMIN' || user?.role === 'Admin';
 
   // Helper to check if user is Super Admin
   const isSuperAdmin = user?.isSuperAdmin || user?.role === 'SuperAdmin';

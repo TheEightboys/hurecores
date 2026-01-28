@@ -30,18 +30,18 @@ async function mapFirebaseUserToUser(firebaseUser: FirebaseUser): Promise<User |
         const profile = await getDocument<Profile>(docs.user(firebaseUser.uid));
 
         if (profile) {
-            // Determine legacy role for backward compatibility
-            let legacyRole: 'Owner' | 'Shift Manager' | 'HR Manager' | 'Payroll Officer' | 'Staff' | 'SuperAdmin' = 'Staff';
+            // Determine display role based on systemRole
+            let displayRole: string = 'Staff';
             if (profile.isSuperAdmin) {
-                legacyRole = 'SuperAdmin';
+                displayRole = 'SuperAdmin';
             } else if (profile.systemRole === 'OWNER') {
-                legacyRole = 'Owner';
+                displayRole = 'Owner';
             } else if (profile.systemRole === 'ADMIN') {
-                // Map based on job title if available
-                if (profile.jobTitle?.includes('HR')) legacyRole = 'HR Manager';
-                else if (profile.jobTitle?.includes('Shift')) legacyRole = 'Shift Manager';
-                else if (profile.jobTitle?.includes('Payroll')) legacyRole = 'Payroll Officer';
-                else legacyRole = 'HR Manager'; // Default admin role
+                displayRole = 'Admin';
+            } else if (profile.systemRole === 'MANAGER') {
+                displayRole = 'Manager';
+            } else if (profile.systemRole === 'EMPLOYEE') {
+                displayRole = 'Staff';
             }
 
             return {
@@ -55,7 +55,7 @@ async function mapFirebaseUserToUser(firebaseUser: FirebaseUser): Promise<User |
                 avatar: profile.avatarUrl,
                 isSuperAdmin: profile.isSuperAdmin,
                 permissions: profile.permissions,
-                role: legacyRole // For backward compatibility
+                role: displayRole // Display role based on systemRole
             };
         }
 

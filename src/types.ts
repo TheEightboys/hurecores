@@ -3,10 +3,10 @@
 // =====================================================
 
 // System role determines access level (NOT job title)
-export type SystemRole = 'OWNER' | 'ADMIN' | 'EMPLOYEE';
+export type SystemRole = 'OWNER' | 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
 
-// Legacy role for backward compatibility (maps to job titles)
-export type UserRole = 'Owner' | 'Shift Manager' | 'HR Manager' | 'Payroll Officer' | 'Staff' | 'SuperAdmin';
+// Display role for UI (friendly names based on systemRole)
+export type UserRole = 'Owner' | 'Admin' | 'Manager' | 'Staff' | 'SuperAdmin';
 
 export type SubscriptionPlan = 'Essential' | 'Professional' | 'Enterprise';
 
@@ -971,12 +971,13 @@ export const PLAN_LIMITS = {
 
 export function getSystemRoleFromLegacy(role: UserRole): SystemRole {
   if (role === 'Owner') return 'OWNER';
-  if (role === 'HR Manager' || role === 'Shift Manager' || role === 'Payroll Officer') return 'ADMIN';
+  if (role === 'Admin') return 'ADMIN';
+  if (role === 'Manager') return 'MANAGER';
   return 'EMPLOYEE';
 }
 
 export function canHavePermissions(systemRole: SystemRole): boolean {
-  return systemRole === 'ADMIN';
+  return systemRole === 'ADMIN' || systemRole === 'MANAGER';
 }
 
 export function isOwnerRole(systemRole: SystemRole): boolean {
