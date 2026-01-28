@@ -16,7 +16,6 @@ const KENYA_DEFAULT_LEAVES = [
     { name: 'Compassionate Leave', daysAllowed: 5, isPaid: true, requiresApproval: true, requiresDocument: false, notes: 'Bereavement / family emergency' },
     { name: 'Study Leave', daysAllowed: 10, isPaid: true, requiresApproval: true, requiresDocument: true, notes: 'Employer-defined' },
     { name: 'Unpaid Leave', daysAllowed: 999, isPaid: false, requiresApproval: true, requiresDocument: false, notes: 'No balance limit' },
-    { name: 'Comp Off', daysAllowed: 10, isPaid: true, requiresApproval: true, requiresDocument: false, notes: 'Compensatory time off' },
 ];
 
 const LeaveManager: React.FC = () => {

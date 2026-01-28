@@ -86,8 +86,7 @@ export const leaveService = {
       { name: 'Paternity Leave', daysAllowed: 14, isPaid: true, requiresApproval: true, requiresDocument: true, carryForwardAllowed: false, appliesToAll: false, appliesToRoles: ['Doctor', 'Clinical Officer', 'Nurse', 'Lab Technician', 'Pharmacist', 'HR', 'Administrator'], canBeOverridden: false, isDefault: true, notes: 'Male employees' },
       { name: 'Compassionate Leave', daysAllowed: 5, isPaid: true, requiresApproval: true, requiresDocument: false, carryForwardAllowed: false, appliesToAll: true, appliesToRoles: [], canBeOverridden: true, isDefault: true, notes: 'Bereavement / family emergency' },
       { name: 'Study Leave', daysAllowed: 10, isPaid: true, requiresApproval: true, requiresDocument: true, carryForwardAllowed: false, appliesToAll: true, appliesToRoles: [], canBeOverridden: true, isDefault: true, notes: 'Employer-defined, configurable paid/unpaid' },
-      { name: 'Unpaid Leave', daysAllowed: 999, isPaid: false, requiresApproval: true, requiresDocument: false, carryForwardAllowed: false, appliesToAll: true, appliesToRoles: [], canBeOverridden: false, isDefault: true, notes: 'Unlimited (no balance limit)' },
-      { name: 'Comp Off', daysAllowed: 10, isPaid: true, requiresApproval: true, requiresDocument: false, carryForwardAllowed: true, maxCarryForwardDays: 5, appliesToAll: true, appliesToRoles: [], canBeOverridden: true, isDefault: true, notes: 'Compensatory time off' }
+      { name: 'Unpaid Leave', daysAllowed: 999, isPaid: false, requiresApproval: true, requiresDocument: false, carryForwardAllowed: false, appliesToAll: true, appliesToRoles: [], canBeOverridden: false, isDefault: true, notes: 'Unlimited (no balance limit)' }
     ];
 
     for (const type of defaults) {

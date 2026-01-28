@@ -68,11 +68,14 @@ const MyLeave: React.FC = () => {
             }
 
             // Map to expected structure for UI (renaming fields if necessary)
-            const mappedEntitlements = balances.map(b => ({
-                ...b,
-                leaveTypeName: b.leaveType?.name || 'Unknown',
-                // leaveService returns 'allocated' and 'remaining', so no extra math needed
-            }));
+            // Filter out orphaned entitlements (where leave type was deleted)
+            const mappedEntitlements = balances
+                .filter(b => b.leaveType && b.leaveType.name) // Only include entitlements with valid leave types
+                .map(b => ({
+                    ...b,
+                    leaveTypeName: b.leaveType?.name || 'Unknown',
+                    // leaveService returns 'allocated' and 'remaining', so no extra math needed
+                }));
 
             setEntitlements(mappedEntitlements);
 
