@@ -187,8 +187,15 @@ const OrgDetails: React.FC<{ selectedLocationId?: string }> = ({ selectedLocatio
     const getFacilityStatus = (location: Location): { status: string; color: string } => {
         const isExpired = location.licenseExpiry && new Date(location.licenseExpiry) < new Date();
         if (isExpired) return { status: 'Expired', color: 'bg-red-100 text-red-700' };
+        // Check both status and verificationStatus fields for backwards compatibility
+        // Some facilities were approved before the fix that updates both fields
+        const locAny = location as any;
+        const verificationStatus = locAny.verificationStatus;
         // Both 'Verified' (approved) and 'Active' (approved + enabled) mean approved
-        if (location.status === 'Verified' || location.status === 'Active') return { status: 'Approved', color: 'bg-emerald-100 text-emerald-700' };
+        if (location.status === 'Verified' || location.status === 'Active' || 
+            verificationStatus === 'Approved' || verificationStatus === 'Active') {
+            return { status: 'Approved', color: 'bg-emerald-100 text-emerald-700' };
+        }
         if (location.status === 'Pending') return { status: 'Pending', color: 'bg-amber-100 text-amber-700' };
         return { status: 'Draft', color: 'bg-slate-100 text-slate-600' };
     };
@@ -553,25 +560,7 @@ const OrgDetails: React.FC<{ selectedLocationId?: string }> = ({ selectedLocatio
                 </div>
             </div>
 
-            {/* Trial-specific behavior notice */}
-            {isTrial && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-                    <h4 className="font-bold text-blue-800 mb-3 flex items-center">
-                        <span className="mr-2">ℹ️</span> Trial Account Notice
-                    </h4>
-                    <p className="text-sm text-blue-700 mb-3">
-                        During your trial period, you can complete all verification steps. However, the following actions require
-                        <strong> Approved</strong> verification status:
-                    </p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-                        <p className="text-blue-700">❌ Billing & Payments</p>
-                        <p className="text-blue-700">❌ Generate Invoices</p>
-                        <p className="text-blue-700">❌ Payroll Payouts</p>
-                        <p className="text-blue-700">❌ Export Statutory Reports</p>
-                        <p className="text-blue-700">❌ External Payments</p>
-                    </div>
-                </div>
-            )}
+
 
             {/* Facility License Modal */}
             {showFacilityModal && selectedLocation && (

@@ -303,11 +303,11 @@ export default function HureCoreLanding() {
                             <div className="absolute top-0 right-0 -mr-8 -mt-8 h-32 w-32 rounded-full bg-gradient-to-br from-teal-50 to-blue-50 opacity-0 group-hover:opacity-100 transition-opacity blur-2xl" />
 
                             <div className="relative z-10">
-                                <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm text-teal-600 mb-6 group-hover:scale-110 transition-transform duration-300">
-                                    <Icon name={f.icon} className="w-6 h-6" />
+                                <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm text-teal-600 mb-6 group-hover:scale-110 transition-transform duration-300">
+                                    <Icon name={f.icon} className="w-8 h-8" />
                                 </div>
-                                <h3 className="text-2xl font-bold text-slate-900 mb-3">{f.title}</h3>
-                                <p className="text-xs text-slate-500 leading-relaxed">{f.desc}</p>
+                                <h3 className="text-3xl font-bold text-slate-900 mb-3">{f.title}</h3>
+                                <p className="text-lg text-slate-500 leading-relaxed">{f.desc}</p>
                             </div>
                         </div>
                     ))}
@@ -326,7 +326,7 @@ export default function HureCoreLanding() {
                 </div>
 
                 <div className="text-center max-w-3xl mx-auto mb-16">
-                    <h2 className="text-6xl font-bold tracking-widest text-teal-600 uppercase mb-3">{content.pricingEyebrow || DEFAULT_LANDING_CONTENT.pricingEyebrow}</h2>
+                    <h2 className="text-4xl font-bold tracking-widest text-teal-600 uppercase mb-3">{content.pricingEyebrow || DEFAULT_LANDING_CONTENT.pricingEyebrow}</h2>
                     <h3 className="text-4xl lg:text-5xl font-display font-extrabold text-slate-900">{content.pricingTitle || DEFAULT_LANDING_CONTENT.pricingTitle}</h3>
                     <p className="mt-4 text-slate-600 text-sm">{content.pricingNote || DEFAULT_LANDING_CONTENT.pricingNote}</p>
                 </div>

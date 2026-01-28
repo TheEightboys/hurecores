@@ -391,8 +391,9 @@ const ApprovalsManager: React.FC<ApprovalsManagerProps> = ({ initialFilter = 'Pe
                 });
             }
 
-            // Update location
+            // Update location - set status to 'Verified' so employer dashboard shows it as Approved
             await updateDoc(doc(db, 'organizations', facility.organizationId, 'locations', facility.id), {
+                status: 'Verified',
                 verificationStatus: 'Approved'
             });
 
@@ -434,7 +435,9 @@ const ApprovalsManager: React.FC<ApprovalsManagerProps> = ({ initialFilter = 'Pe
                 });
             }
 
+            // Update location - set status to 'Active' so employer dashboard shows it correctly
             await updateDoc(doc(db, 'organizations', facility.organizationId, 'locations', facility.id), {
+                status: 'Active',
                 verificationStatus: 'Active',
                 isActive: true
             });
