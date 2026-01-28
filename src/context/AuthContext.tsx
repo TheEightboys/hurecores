@@ -30,10 +30,14 @@ async function mapFirebaseUserToUser(firebaseUser: FirebaseUser): Promise<User |
         const profile = await getDocument<Profile>(docs.user(firebaseUser.uid));
 
         if (profile) {
-            // Determine display role based on systemRole
+            // Determine display role and systemRole
             let displayRole: string = 'Staff';
+            let systemRole: SystemRole = profile.systemRole || 'EMPLOYEE';
+            
+            // First check if systemRole is explicitly set
             if (profile.isSuperAdmin) {
                 displayRole = 'SuperAdmin';
+                systemRole = 'OWNER'; // SuperAdmins have owner-level access
             } else if (profile.systemRole === 'OWNER') {
                 displayRole = 'Owner';
             } else if (profile.systemRole === 'ADMIN') {
@@ -42,20 +46,30 @@ async function mapFirebaseUserToUser(firebaseUser: FirebaseUser): Promise<User |
                 displayRole = 'Manager';
             } else if (profile.systemRole === 'EMPLOYEE') {
                 displayRole = 'Staff';
+            } else if (!profile.systemRole && profile.jobTitle) {
+                // Fallback: If no systemRole, infer from jobTitle
+                const jobTitleLower = profile.jobTitle.toLowerCase();
+                if (jobTitleLower === 'owner' || jobTitleLower.includes('owner')) {
+                    displayRole = 'Owner';
+                    systemRole = 'OWNER';
+                } else if (jobTitleLower.includes('admin') || jobTitleLower.includes('manager') || jobTitleLower.includes('hr')) {
+                    displayRole = 'Admin';
+                    systemRole = 'ADMIN';
+                }
             }
 
             return {
                 id: profile.id,
                 name: profile.fullName,
                 email: profile.email,
-                systemRole: profile.systemRole,
+                systemRole: systemRole,
                 jobTitle: profile.jobTitle,
                 organizationId: profile.organizationId,
                 locationId: profile.locationId,
                 avatar: profile.avatarUrl,
                 isSuperAdmin: profile.isSuperAdmin,
                 permissions: profile.permissions,
-                role: displayRole // Display role based on systemRole
+                role: displayRole // Display role based on systemRole or jobTitle
             };
         }
 
