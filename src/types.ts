@@ -621,9 +621,9 @@ export const DEFAULT_LUNCH_RULES: LunchRules = {
   enabled: true,
   oncePerDay: true,
   minDurationMinutes: 30,
-  maxDurationMinutes: undefined,
+  maxDurationMinutes: null as any,
   isPaid: false,
-  requiredAfterHours: undefined,
+  requiredAfterHours: null as any,
   reminderAfterHours: 4
 };
 

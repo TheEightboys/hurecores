@@ -113,7 +113,12 @@ const MySchedule: React.FC = () => {
 
 
     // --- RENDER ---
-    const upcomingShiftsCount = myShifts.filter(s => !isPast(s.date)).length;
+    const upcomingShifts = myShifts.filter(s => !isPast(s.date));
+    const hasUpcomingShifts = upcomingShifts.length > 0;
+    const schedulingEnabled = settings?.scheduling?.enabled ?? true;
+    
+    // Show NoSchedulingView if: scheduling is disabled OR employee has no assigned shifts
+    const showNoSchedulingView = !schedulingEnabled || !hasUpcomingShifts;
 
     return (
         <div className="p-6 md:p-8 max-w-7xl mx-auto flex flex-col animate-in fade-in duration-500 font-inter">
@@ -125,8 +130,8 @@ const MySchedule: React.FC = () => {
                 </div>
             </div>
 
-            {/* Content based on settings */}
-            {!(settings?.scheduling?.enabled ?? true) ? (
+            {/* Content based on settings and assigned shifts */}
+            {showNoSchedulingView ? (
                 <NoSchedulingView />
             ) : (
                 <>
@@ -154,7 +159,7 @@ const MySchedule: React.FC = () => {
                             </div>
 
                             <div className="space-y-4">
-                                {myShifts.filter(s => !isPast(s.date)).length > 0 ? myShifts.filter(s => !isPast(s.date)).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((shift) => (
+                                {upcomingShifts.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((shift) => (
                                     <div key={shift.id} className={`bg-white p-6 rounded-2xl border shadow-sm hover:shadow-md transition-all group ${isToday(shift.date) ? 'border-teal-400 ring-4 ring-teal-50' : 'border-slate-200'}`}>
                                         {isToday(shift.date) && (
                                             <div className="mb-4 inline-flex items-center space-x-2 bg-teal-100 text-teal-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
@@ -185,13 +190,7 @@ const MySchedule: React.FC = () => {
                                             </div>
                                         </div>
                                     </div>
-                                )) : (
-                                    <div className="p-10 bg-white border border-dashed border-slate-200 rounded-3xl text-center">
-                                        <div className="text-4xl mb-4">☕</div>
-                                        <h3 className="text-slate-900 font-bold mb-1">No upcoming shifts</h3>
-                                        <p className="text-slate-500 text-sm">You're all caught up! Check available shifts to pick up more work.</p>
-                                    </div>
-                                )}
+                                ))}
                             </div>
                         </div>
 

@@ -32,6 +32,22 @@ import {
 
 const SETTINGS_DOC_ID = 'default'; // Single settings doc per organization
 
+// Helper to recursively remove undefined values (Firestore doesn't accept undefined)
+const removeUndefined = (obj: any): any => {
+    if (obj === null || obj === undefined) return null;
+    if (Array.isArray(obj)) return obj.map(removeUndefined);
+    if (typeof obj === 'object') {
+        const cleaned: any = {};
+        for (const [key, value] of Object.entries(obj)) {
+            if (value !== undefined) {
+                cleaned[key] = removeUndefined(value);
+            }
+        }
+        return cleaned;
+    }
+    return obj;
+};
+
 export const settingsService = {
     /**
      * Get organization settings with defaults
@@ -89,7 +105,7 @@ export const settingsService = {
     ): Promise<OrganizationSettings> {
         const currentSettings = await this.getSettings(organizationId);
 
-        const updatedSettings = {
+        const updatedSettings = removeUndefined({
             organizationId,
             attendance: { ...currentSettings.attendance, ...updates.attendance },
             lunch: { ...currentSettings.lunch, ...updates.lunch },
@@ -97,7 +113,7 @@ export const settingsService = {
             scheduling: { ...currentSettings.scheduling, ...updates.scheduling },
             updatedAt: serverTimestamp(),
             updatedBy: auth.currentUser?.uid || 'system'
-        };
+        });
 
         await setDoc(docs.settings(organizationId, SETTINGS_DOC_ID), updatedSettings, { merge: true });
 
@@ -108,7 +124,7 @@ export const settingsService = {
      * Reset settings to defaults
      */
     async resetToDefaults(organizationId: string): Promise<OrganizationSettings> {
-        const defaultSettings = {
+        const defaultSettings = removeUndefined({
             organizationId,
             attendance: { ...DEFAULT_ATTENDANCE_RULES },
             lunch: { ...DEFAULT_LUNCH_RULES },
@@ -116,7 +132,7 @@ export const settingsService = {
             scheduling: { ...DEFAULT_SCHEDULING_RULES },
             updatedAt: serverTimestamp(),
             updatedBy: auth.currentUser?.uid || 'system'
-        };
+        });
 
         await setDoc(docs.settings(organizationId, SETTINGS_DOC_ID), defaultSettings);
 
