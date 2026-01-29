@@ -380,19 +380,14 @@ const PayrollView: React.FC<PayrollViewProps> = ({ selectedLocationId }) => {
     const handleExport = async () => {
         if (!user?.organizationId || !selectedPeriod) return;
 
-        // Only allow export if finalized
-        if (!selectedPeriod.isFinalized) {
-            setError('Please finalize the payroll period before exporting. This ensures data integrity.');
-            return;
-        }
-
         try {
             const csv = await payrollService.exportToCSV(user.organizationId, selectedPeriod.id);
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `payroll-${selectedPeriod.name.replace(/\s+/g, '-')}.csv`;
+            const status = selectedPeriod.isFinalized ? 'final' : 'draft';
+            a.download = `payroll-${selectedPeriod.name.replace(/\s+/g, '-')}-${status}.csv`;
             a.click();
             window.URL.revokeObjectURL(url);
         } catch (err: any) {
@@ -719,9 +714,15 @@ const PayrollView: React.FC<PayrollViewProps> = ({ selectedLocationId }) => {
                                                 >
                                                     🔒 Finalize Period
                                                 </button>
+                                                <button
+                                                    onClick={handleExport}
+                                                    className="bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-blue-700"
+                                                >
+                                                    📥 Export Employees CSV
+                                                </button>
                                             </>
                                         ) : (
-                                            <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-xl text-xs font-semibold text-slate-500 border border-slate-200" title="Organization must be verified and on a paid plan to execute payouts">
+                                            <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-xl text-xs font-semibold text-slate-500 border border-slate-200" title="Organization must be verified to execute payouts">
                                                 🔒 Payouts Locked (Verification Required)
                                             </div>
                                         )}

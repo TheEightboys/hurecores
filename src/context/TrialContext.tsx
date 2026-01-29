@@ -42,6 +42,33 @@ export const useTrialStatus = () => {
     return context;
 };
 
+// Safe version that returns defaults when outside provider (for components that may render before provider)
+export const useTrialStatusSafe = () => {
+    const context = useContext(TrialContext);
+    if (!context) {
+        return {
+            isLoading: true,
+            loadError: null,
+            isTrial: false,
+            isActive: false,
+            isInactive: false,
+            isVerified: false,
+            daysRemaining: 0,
+            trialEndDate: null,
+            isUrgent: false,
+            isCritical: false,
+            canAccessOperations: false,
+            canPerformPayouts: false,
+            canGenerateInvoices: false,
+            canExportReports: false,
+            organization: null,
+            subscription: null,
+            refreshStatus: async () => {}
+        };
+    }
+    return context;
+};
+
 export const TrialProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
@@ -157,14 +184,14 @@ export const TrialProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
 
     // Access control rules
-    // During trial (Day 1-10): Full operational access, but payout/invoice/export blocked
+    // During trial (Day 1-10): Full operational access if verified
     // After trial unpaid (Inactive): Everything locked except billing
     // After payment (Active): Full access, verification rules enforced
 
     const canAccessOperations = isTrial || isActive; // Can use schedule, attendance, leave
-    const canPerformPayouts = isActive && isVerified; // Must be paid AND verified
-    const canGenerateInvoices = isActive && isVerified;
-    const canExportReports = isActive && isVerified;
+    const canPerformPayouts = (isActive || isTrial) && isVerified; // Must be (paid OR trial) AND verified
+    const canGenerateInvoices = (isActive || isTrial) && isVerified;
+    const canExportReports = (isActive || isTrial) && isVerified;
 
     const value: TrialContextType = {
         isLoading,

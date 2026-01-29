@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useTrialStatus } from '../../context/TrialContext';
+import { useTrialStatusSafe } from '../../context/TrialContext';
 import { notificationService } from '../../lib/services/notification.service';
 import type { Organization, Location } from '../../types';
 
@@ -32,7 +32,7 @@ const EmployerTopBar: React.FC<EmployerTopBarProps> = ({
     setSidebarOpen
 }) => {
     const { user, logout } = useAuth();
-    const { isTrial, daysRemaining } = useTrialStatus(); // Use context
+    const { isTrial, daysRemaining } = useTrialStatusSafe(); // Use safe context that won't throw
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [showNotifications, setShowNotifications] = useState(false);
