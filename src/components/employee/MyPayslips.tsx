@@ -4,6 +4,7 @@ import { payrollService } from '../../lib/services';
 import type { PayrollPeriod, PayrollEntry } from '../../types';
 import { formatDateKE } from '../../lib/utils/dateFormat';
 import { useTrialStatus, AccessBlockedOverlay } from '../../context/TrialContext';
+import DateInput from '../common/DateInput';
 
 // Helper to format currency
 const formatCurrency = (cents: number) => {
@@ -240,27 +241,25 @@ const MyPayslips: React.FC = () => {
                 </div>
                 <div className="flex flex-col md:flex-row gap-4 items-end">
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">From</label>
-                        <input
-                            type="date"
+                        <DateInput
+                            label="From"
                             value={startDate}
-                            onChange={(e) => {
-                                setStartDate(e.target.value);
+                            onChange={(value) => {
+                                setStartDate(value);
                                 setQuickSelect('custom');
                             }}
-                            className="w-full md:w-40 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0f766e] focus:border-[#0f766e]"
+                            className="w-full md:w-40"
                         />
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">To</label>
-                        <input
-                            type="date"
+                        <DateInput
+                            label="To"
                             value={endDate}
-                            onChange={(e) => {
-                                setEndDate(e.target.value);
+                            onChange={(value) => {
+                                setEndDate(value);
                                 setQuickSelect('custom');
                             }}
-                            className="w-full md:w-40 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0f766e] focus:border-[#0f766e]"
+                            className="w-full md:w-40"
                         />
                     </div>
                     <div>

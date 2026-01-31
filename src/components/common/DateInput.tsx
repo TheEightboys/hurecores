@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Calendar } from 'lucide-react';
 import { formatDateKE } from '../../lib/utils/dateFormat';
 
@@ -19,7 +19,19 @@ const DateInput: React.FC<DateInputProps> = ({
 }) => {
     const inputRef = useRef<HTMLInputElement>(null);
 
+    // Set the input type to "date" which uses YYYY-MM-DD internally
+    // But display the formatted dd/mm/yyyy to the user
+    useEffect(() => {
+        // Ensure the browser's date picker respects dd/mm/yyyy format
+        // Note: The native date input type="date" always uses YYYY-MM-DD for value
+        // but the display can vary by browser locale
+        if (inputRef.current && value) {
+            inputRef.current.value = value; // YYYY-MM-DD format
+        }
+    }, [value]);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        // Native date input always returns YYYY-MM-DD format
         onChange(e.target.value);
     };
 
@@ -35,7 +47,7 @@ const DateInput: React.FC<DateInputProps> = ({
         }
     };
 
-    // Format display value
+    // Format display value to dd/mm/yyyy
     const displayValue = value ? formatDateKE(value) : '';
 
     return (
@@ -52,10 +64,10 @@ const DateInput: React.FC<DateInputProps> = ({
             >
                 <Calendar className="w-5 h-5 text-slate-400 mr-3 flex-shrink-0" />
                 <span className={`block w-full text-sm ${value ? 'text-slate-900' : 'text-slate-400'}`}>
-                    {value ? displayValue : (props.placeholder || 'Select date')}
+                    {value ? displayValue : (props.placeholder || 'dd/mm/yyyy')}
                 </span>
 
-                {/* Hidden native input for functionality */}
+                {/* Hidden native input for functionality - always uses YYYY-MM-DD internally */}
                 <input
                     ref={inputRef}
                     type="date"

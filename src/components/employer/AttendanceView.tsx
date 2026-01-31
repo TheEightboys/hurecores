@@ -523,7 +523,7 @@ const ManualEntryModal: React.FC<{
     onSave: (data: any) => void;
 }> = ({ locations, onClose, onSave }) => {
     const { user } = useAuth();
-    const [staff, setStaff] = useState<any[]>([]);
+    const [allStaff, setAllStaff] = useState<any[]>([]);
     const [formData, setFormData] = useState({
         staffId: '',
         locationId: '',
@@ -538,10 +538,24 @@ const ManualEntryModal: React.FC<{
             if (!user?.organizationId) return;
             const { staffService } = await import('../../lib/services');
             const staffData = await staffService.getAll(user.organizationId);
-            setStaff(staffData.filter(s => s.staffStatus === 'Active'));
+            setAllStaff(staffData.filter(s => s.staffStatus === 'Active'));
         };
         loadStaff();
     }, [user?.organizationId]);
+
+    // Filter staff by selected location
+    const filteredStaff = formData.locationId
+        ? allStaff.filter(s => s.locationId === formData.locationId)
+        : allStaff;
+
+    const handleLocationChange = (locationId: string) => {
+        setFormData(prev => ({ 
+            ...prev, 
+            locationId,
+            // Reset staff selection when location changes
+            staffId: ''
+        }));
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -558,30 +572,33 @@ const ManualEntryModal: React.FC<{
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">Location</label>
+                        <select
+                            value={formData.locationId}
+                            onChange={(e) => handleLocationChange(e.target.value)}
+                            className="w-full px-4 py-3 border border-slate-300 rounded-xl"
+                        >
+                            <option value="">Select Location</option>
+                            {locations.map(loc => (
+                                <option key={loc.id} value={loc.id}>{loc.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">Staff Member *</label>
                         <select
                             required
                             value={formData.staffId}
                             onChange={(e) => setFormData(prev => ({ ...prev, staffId: e.target.value }))}
                             className="w-full px-4 py-3 border border-slate-300 rounded-xl"
+                            disabled={!formData.locationId}
                         >
-                            <option value="">Select Staff</option>
-                            {staff.map(s => (
+                            <option value="">
+                                {formData.locationId ? 'Select Staff' : 'Please select a location first'}
+                            </option>
+                            {filteredStaff.map(s => (
                                 <option key={s.id} value={s.id}>{s.fullName} - {s.jobTitle}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">Location</label>
-                        <select
-                            value={formData.locationId}
-                            onChange={(e) => setFormData(prev => ({ ...prev, locationId: e.target.value }))}
-                            className="w-full px-4 py-3 border border-slate-300 rounded-xl"
-                        >
-                            <option value="">Select Location</option>
-                            {locations.map(loc => (
-                                <option key={loc.id} value={loc.id}>{loc.name}</option>
                             ))}
                         </select>
                     </div>

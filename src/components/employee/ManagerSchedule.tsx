@@ -174,7 +174,7 @@ const ManagerSchedule: React.FC = () => {
                                 }`}
                         >
                             <div className="text-xs font-bold text-slate-500 uppercase">
-                                {day.toLocaleDateString('en-US', { weekday: 'short' })}
+                                {day.toLocaleDateString('en-GB', { weekday: 'short' })}
                             </div>
                             <div className={`text-lg font-bold ${day.toISOString().split('T')[0] === new Date().toISOString().split('T')[0]
                                 ? 'text-blue-600'

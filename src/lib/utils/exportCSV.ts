@@ -69,26 +69,40 @@ export function formatCentsForCSV(cents: number): string {
 }
 
 /**
- * Format date for CSV (YYYY-MM-DD)
+ * Format date for CSV (dd/mm/yyyy)
  */
 export function formatDateForCSV(dateString: string | undefined): string {
     if (!dateString) return '';
     try {
         const date = new Date(dateString);
-        return date.toISOString().split('T')[0];
+        return date.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
     } catch {
         return dateString;
     }
 }
 
 /**
- * Format datetime for CSV (YYYY-MM-DD HH:mm)
+ * Format datetime for CSV (dd/mm/yyyy HH:mm)
  */
 export function formatDateTimeForCSV(dateString: string | undefined): string {
     if (!dateString) return '';
     try {
         const date = new Date(dateString);
-        return date.toISOString().replace('T', ' ').substring(0, 16);
+        const datePart = date.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+        const timePart = date.toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+        return `${datePart} ${timePart}`;
     } catch {
         return dateString;
     }

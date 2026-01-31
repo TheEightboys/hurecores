@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import DateInput from '../common/DateInput';
 
 interface PAYEBand {
     limit: number;
@@ -149,12 +150,10 @@ const StatutoryRulesManager: React.FC = () => {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">Effective Date</label>
-                        <input
-                            type="date"
+                        <DateInput
+                            label="Effective Date"
                             value={rules.effectiveDate || ''}
-                            onChange={e => setRules({ ...rules, effectiveDate: e.target.value })}
-                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            onChange={(value) => setRules({ ...rules, effectiveDate: value })}
                         />
                         <p className="text-xs text-slate-400 mt-1">When these statutory rules take effect</p>
                     </div>

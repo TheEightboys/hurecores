@@ -171,7 +171,7 @@ const MySchedule: React.FC = () => {
                                         <div className="flex items-start gap-4">
                                             <div className="w-16 h-16 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center justify-center flex-shrink-0">
                                                 <span className="text-xs font-bold text-slate-500 uppercase">
-                                                    {typeof formatDateWithDayKE === 'function' ? formatDateWithDayKE(shift.date).split(',')[0].slice(0, 3) : new Date(shift.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                                                    {typeof formatDateWithDayKE === 'function' ? formatDateWithDayKE(shift.date).split(',')[0].slice(0, 3) : new Date(shift.date).toLocaleDateString('en-GB', { weekday: 'short' })}
                                                 </span>
                                                 <span className="text-2xl font-bold text-slate-900 font-display">
                                                     {new Date(shift.date).getDate()}
@@ -179,7 +179,7 @@ const MySchedule: React.FC = () => {
                                             </div>
                                             <div className="flex-1">
                                                 <div className="font-bold text-slate-900 text-lg">
-                                                    {typeof formatDateFullKE === 'function' ? formatDateFullKE(shift.date) : new Date(shift.date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                                    {typeof formatDateFullKE === 'function' ? formatDateFullKE(shift.date) : new Date(shift.date).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
                                                 </div>
                                                 <div className="text-slate-600 font-medium font-mono bg-slate-50 inline-block px-2 py-0.5 rounded-md mt-1 border border-slate-100">
                                                     {typeof formatTimeKE === 'function' ? formatTimeKE(shift.startTime) : shift.startTime} - {typeof formatTimeKE === 'function' ? formatTimeKE(shift.endTime) : shift.endTime}
@@ -208,7 +208,7 @@ const MySchedule: React.FC = () => {
                                             <div className="relative z-10 flex justify-between items-center gap-4">
                                                 <div>
                                                     <div className="font-bold text-lg mb-1">
-                                                        {typeof formatDateFullKE === 'function' ? formatDateFullKE(shift.date) : new Date(shift.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                                                        {typeof formatDateFullKE === 'function' ? formatDateFullKE(shift.date) : new Date(shift.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
                                                     </div>
                                                     <div className="text-blue-200 font-mono text-sm bg-white/10 px-2 py-1 rounded-lg inline-block border border-white/10">
                                                         {typeof formatTimeKE === 'function' ? formatTimeKE(shift.startTime) : shift.startTime} - {typeof formatTimeKE === 'function' ? formatTimeKE(shift.endTime) : shift.endTime}

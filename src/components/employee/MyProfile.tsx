@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { staffService, policyDocumentsService, organizationService } from '../../lib/services';
 import { storageService } from '../../lib/services/storage.service';
 import type { Profile, PolicyDocument, DocumentAcknowledgement, Location, Organization } from '../../types';
+import DateInput from '../common/DateInput';
 
 const MyProfile: React.FC = () => {
     const { user } = useAuth();
@@ -362,47 +363,6 @@ const MyProfile: React.FC = () => {
                             )}
                         </div>
                     </div>
-
-                    {/* Employment Assignment & Verification */}
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <span className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-lg">✅</span>
-                                <h3 className="text-lg font-bold text-slate-900">Employment Assignment & Verification</h3>
-                            </div>
-                            {getStatusBadge(practiceApproval?.organizationApproved ? 'Approved' : 'Pending')}
-                        </div>
-                        <div className="p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Assigned Organization</label>
-                                    <div className="font-semibold text-slate-900">{organization?.name || 'Not assigned'}</div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Assigned Location(s)</label>
-                                    <div className="font-semibold text-slate-900">{location?.name || 'Not assigned'}</div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Assigned Role</label>
-                                    <div className="font-semibold text-slate-900">{safeProfile.jobTitle || 'Not set'} ({safeProfile.employmentType || 'Full-Time'})</div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Verification Status</label>
-                                    <div className={`font-semibold font-bold ${practiceApproval?.organizationApproved ? 'text-emerald-700' : 'text-amber-600'}`}>
-                                        {practiceApproval?.organizationApproved ? 'APPROVED ✓' : 'PENDING'}
-                                    </div>
-                                </div>
-                                {practiceApproval?.approvedAt && (
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Verified On</label>
-                                        <div className="font-semibold text-slate-900">
-                                            {new Date(practiceApproval.approvedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 {/* Right Column: Personal & Employment (Secondary) */}
@@ -663,18 +623,12 @@ const MyProfile: React.FC = () => {
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                                    Expiry Date <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="date"
-                                    value={credentialsForm.expiryDate}
-                                    onChange={(e) => setCredentialsForm(prev => ({ ...prev, expiryDate: e.target.value }))}
-                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f766e] focus:border-transparent"
-                                    required
-                                />
-                            </div>
+                            <DateInput
+                                label="Expiry Date"
+                                value={credentialsForm.expiryDate}
+                                onChange={(value) => setCredentialsForm(prev => ({ ...prev, expiryDate: value }))}
+                                required
+                            />
 
                             <div>
                                 <label className="block text-sm font-semibold text-slate-700 mb-1">

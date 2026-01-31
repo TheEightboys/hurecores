@@ -200,7 +200,7 @@ const MyAttendance: React.FC = () => {
             let monthGroup = years[year].months.find(m => m.monthIndex === month);
             if (!monthGroup) {
                 monthGroup = {
-                    monthName: d.toLocaleDateString('en-US', { month: 'long' }),
+                    monthName: d.toLocaleDateString('en-GB', { month: 'long' }),
                     monthIndex: month,
                     weeks: [],
                     totalHours: 0,
@@ -383,7 +383,7 @@ const MyAttendance: React.FC = () => {
                             className="text-sm font-bold text-slate-700 border-none bg-transparent focus:ring-0 cursor-pointer"
                         >
                             {Array.from({ length: 12 }).map((_, i) => (
-                                <option key={i} value={i}>{new Date(2000, i, 1).toLocaleDateString('en-US', { month: 'short' })}</option>
+                                <option key={i} value={i}>{new Date(2000, i, 1).toLocaleDateString('en-GB', { month: 'short' })}</option>
                             ))}
                         </select>
                         <select

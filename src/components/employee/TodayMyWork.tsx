@@ -191,7 +191,7 @@ const TodayMyWork: React.FC = () => {
     const formatDate = (dateStr: string) => {
         if (typeof formatDateWithDayKE === 'function') return formatDateWithDayKE(dateStr);
         const date = new Date(dateStr);
-        return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
     };
 
     // Get canonical Monday for the current week (Kenya time)
@@ -207,7 +207,7 @@ const TodayMyWork: React.FC = () => {
 
     // Get day abbreviation
     const getDayAbbrev = (dayIndex: number) => {
-        return getDateForWeekDay(dayIndex).toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 3);
+        return getDateForWeekDay(dayIndex).toLocaleDateString('en-GB', { weekday: 'short' }).slice(0, 3);
     };
 
     // Get day number
@@ -231,7 +231,7 @@ const TodayMyWork: React.FC = () => {
 
     const todayStr = typeof formatDateFullKE === 'function'
         ? formatDateFullKE(new Date())
-        : new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        : new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
 
     return (
         <div className="p-6 md:p-8 max-w-7xl mx-auto animate-in fade-in duration-500">

@@ -374,7 +374,7 @@ const BillingView: React.FC<BillingViewProps> = ({ organization: orgProp }) => {
                                 {payments.slice(0, 10).map((payment) => (
                                     <tr key={payment.id} className="border-b border-slate-50 hover:bg-slate-50">
                                         <td className="py-3 px-2 text-sm text-slate-900">
-                                            {payment.paidAt ? new Date(payment.paidAt).toLocaleDateString() : '-'}
+                                            {payment.paidAt ? new Date(payment.paidAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
                                         </td>
                                         <td className="py-3 px-2 text-sm text-slate-700">{payment.plan}</td>
                                         <td className="py-3 px-2 text-sm font-medium text-slate-900">
@@ -554,7 +554,7 @@ const BillingView: React.FC<BillingViewProps> = ({ organization: orgProp }) => {
                                                 <p className="font-semibold text-slate-800">{payment.plan} Plan</p>
                                                 <p className="text-sm text-slate-500">
                                                     {payment.paidAt
-                                                        ? new Date(payment.paidAt).toLocaleDateString('en-US', {
+                                                        ? new Date(payment.paidAt).toLocaleDateString('en-GB', {
                                                             month: 'short', day: 'numeric', year: 'numeric'
                                                         })
                                                         : 'Pending'

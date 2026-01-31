@@ -177,7 +177,7 @@ const ManagerDashboard: React.FC = () => {
                             {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
                         <div className="text-sm text-slate-500">
-                            {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                            {currentTime.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
                         </div>
                     </div>
                 </div>
